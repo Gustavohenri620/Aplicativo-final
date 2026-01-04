@@ -1,0 +1,7 @@
+{
+  "name": "Finanças Familia Galegos",
+  "description": "",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
