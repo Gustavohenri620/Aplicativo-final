@@ -121,6 +121,12 @@ const App: React.FC = () => {
     await supabase.from('profiles').upsert(updatedProfile);
   };
 
+  const handleLogout = async () => {
+    if (window.confirm('Deseja realmente sair da sua conta?')) {
+      await supabase.auth.signOut();
+    }
+  };
+
   const handleAddTransaction = async (data: Omit<Transaction, 'id' | 'user_id'>) => {
     if (!user) return;
     const newTransaction = {
@@ -207,6 +213,7 @@ const App: React.FC = () => {
       onAddClick={() => setIsAddMenuOpen(true)}
       userProfile={userProfile || { id: user.id, email: user.email }}
       onUpdateProfile={handleUpdateProfile}
+      onLogout={handleLogout}
     >
       {renderContent()}
 
