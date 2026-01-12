@@ -10,7 +10,10 @@ import {
   ChevronRight, Apple, ListPlus, Info,
   ChevronDown, GlassWater, Book, PlayCircle,
   X, Activity, MessageSquare,
-  Sparkle
+  Sparkle,
+  Trophy as TrophyIcon,
+  Crown,
+  Timer
 } from 'lucide-react';
 import { RoutineItem, UserProfile } from '../types';
 
@@ -33,6 +36,60 @@ interface WorkoutTemplate {
   desc: string;
   exercises: Exercise[];
 }
+
+interface WeeklyChallenge {
+  id: string;
+  title: string;
+  desc: string;
+  icon: any;
+  reward: number;
+  color: string;
+  bg: string;
+  accent: string;
+}
+
+const WEEKLY_CHALLENGES: WeeklyChallenge[] = [
+  {
+    id: 'ch-1',
+    title: 'Semana do Cardio',
+    desc: 'Complete 40 min de atividade aeróbica todos os dias.',
+    icon: Flame,
+    reward: 150,
+    color: 'text-orange-500',
+    bg: 'bg-orange-500/10',
+    accent: 'border-orange-200'
+  },
+  {
+    id: 'ch-2',
+    title: 'Força Total',
+    desc: 'Treine musculação por 4 dias consecutivos.',
+    icon: Dumbbell,
+    reward: 150,
+    color: 'text-indigo-500',
+    bg: 'bg-indigo-500/10',
+    accent: 'border-indigo-200'
+  },
+  {
+    id: 'ch-3',
+    title: 'Hidratação Máxima',
+    desc: 'Bata a meta de 3.5L de água durante 7 dias.',
+    icon: GlassWater,
+    reward: 150,
+    color: 'text-blue-500',
+    bg: 'bg-blue-500/10',
+    accent: 'border-blue-200'
+  },
+  {
+    id: 'ch-4',
+    title: 'Mente Blindada',
+    desc: 'Medite 15 minutos ao acordar e antes de dormir.',
+    icon: Brain,
+    reward: 150,
+    color: 'text-purple-500',
+    bg: 'bg-purple-500/10',
+    accent: 'border-purple-200'
+  }
+];
 
 const WORKOUT_LIBRARY: WorkoutTemplate[] = [
   { 
@@ -115,13 +172,33 @@ const RoutineTracker: React.FC<RoutineTrackerProps> = ({ routines, userProfile, 
   const [showXP, setShowXP] = useState<string | null>(null);
   const [selectedWorkoutPreview, setSelectedWorkoutPreview] = useState<WorkoutTemplate | null>(null);
 
+  // Determine current weekly challenge based on the day of the year (rotates weekly)
+  const currentWeekIndex = useMemo(() => {
+    const now = new Date();
+    const start = new Date(now.getFullYear(), 0, 0);
+    const diff = (now.getTime() - start.getTime()) + ((start.getTimezoneOffset() - now.getTimezoneOffset()) * 60 * 1000);
+    const oneDay = 1000 * 60 * 60 * 24;
+    const day = Math.floor(diff / oneDay);
+    const week = Math.floor(day / 7);
+    return week % WEEKLY_CHALLENGES.length;
+  }, []);
+
+  const challenge = WEEKLY_CHALLENGES[currentWeekIndex];
+
   const filteredItems = routines.filter(item => item.type === activeSubTab);
   
-  const currentXP = routines.filter(r => r.completed).length * 50;
+  // Custom XP calculation: Challenges give 150 XP, normal tasks give 50 XP
+  const currentXP = useMemo(() => {
+    return routines.filter(r => r.completed).reduce((acc, r) => {
+      return acc + (r.category === 'CHALLENGE' ? 150 : 50);
+    }, 0);
+  }, [routines]);
+
   const level = Math.floor(currentXP / 500) + 1;
   const xpInLevel = currentXP % 500;
 
   const handleToggle = (id: string, completed: boolean) => {
+    const item = routines.find(r => r.id === id);
     if (completed) {
       setShowXP(id);
       setTimeout(() => setShowXP(null), 1500);
@@ -129,13 +206,21 @@ const RoutineTracker: React.FC<RoutineTrackerProps> = ({ routines, userProfile, 
     onToggle(id, completed);
   };
 
-  const handleAddItem = (titleOverride?: string) => {
+  const handleAddItem = (titleOverride?: string, isChallenge: boolean = false) => {
     const title = titleOverride || inputValue.trim();
     if (!title) return;
+    
+    // Check if challenge already exists
+    if (isChallenge && routines.some(r => r.category === 'CHALLENGE' && r.title === title && !r.completed)) {
+      alert("Este desafio já está na sua lista!");
+      return;
+    }
+
     onAdd({
       title,
       completed: false,
-      type: activeSubTab
+      type: isChallenge ? 'TASK' : activeSubTab,
+      category: isChallenge ? 'CHALLENGE' : undefined
     });
     if (!titleOverride) setInputValue('');
   };
@@ -174,13 +259,18 @@ const RoutineTracker: React.FC<RoutineTrackerProps> = ({ routines, userProfile, 
         <div className="space-y-3">
           {items.map(item => {
             const isJustCompleted = showXP === item.id;
+            const isChallenge = item.category === 'CHALLENGE';
+            const xpValue = isChallenge ? 150 : 50;
+
             return (
               <div 
                 key={item.id}
                 className={`group relative flex items-center justify-between p-4 sm:p-5 rounded-[2rem] border-2 transition-all duration-700 overflow-hidden ${
                   item.completed 
                     ? `bg-emerald-500/10 border-emerald-500/30 animate-glow-pulse shadow-[0_0_20px_rgba(16,185,129,0.15)] opacity-80` 
-                    : 'bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800 hover:border-indigo-500/30 shadow-sm'
+                    : isChallenge
+                      ? 'bg-gradient-to-br from-white to-amber-50 dark:from-slate-900 dark:to-amber-950/20 border-amber-500/30 shadow-md'
+                      : 'bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800 hover:border-indigo-500/30 shadow-sm'
                 }`}
               >
                 {/* Visual Shimmer/Beam Effect for newly completed tasks */}
@@ -196,28 +286,32 @@ const RoutineTracker: React.FC<RoutineTrackerProps> = ({ routines, userProfile, 
                      className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-500 transform active:scale-90 shrink-0 ${
                        item.completed 
                          ? 'bg-emerald-500 text-white shadow-[0_0_15px_rgba(16,185,129,0.5)] scale-110' 
-                         : 'bg-slate-50 dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 text-transparent hover:border-indigo-400'
+                         : isChallenge 
+                           ? 'bg-amber-500 text-white shadow-lg border-2 border-amber-400 animate-pulse'
+                           : 'bg-slate-50 dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 text-transparent hover:border-indigo-400'
                      }`}
                    >
-                     <CheckCircle2 size={24} className={`transition-all duration-500 ${item.completed ? 'opacity-100 scale-100 rotate-0' : 'opacity-0 scale-50 -rotate-45'}`} />
+                     {isChallenge && !item.completed ? <Crown size={24} /> : <CheckCircle2 size={24} className={`transition-all duration-500 ${item.completed ? 'opacity-100 scale-100 rotate-0' : 'opacity-0 scale-50 -rotate-45'}`} />}
                    </button>
                    <div className="flex flex-col min-w-0">
                      <span className={`font-bold text-base sm:text-lg truncate transition-all duration-700 ${item.completed ? 'line-through text-emerald-800/60 dark:text-emerald-400/60 blur-[0.2px]' : 'text-slate-800 dark:text-white'}`}>
+                       {isChallenge && <span className="text-amber-500 mr-2">[DESAFIO]</span>}
                        {item.title}
                      </span>
                      <div className="flex items-center gap-2">
-                        <span className={`text-[10px] font-black uppercase tracking-tighter transition-all duration-500 ${item.completed ? 'text-emerald-500' : 'text-indigo-500'}`}>
-                           {item.completed ? 'Concluído' : '+50 XP'}
+                        <span className={`text-[10px] font-black uppercase tracking-tighter transition-all duration-500 ${item.completed ? 'text-emerald-500' : isChallenge ? 'text-amber-500' : 'text-indigo-500'}`}>
+                           {item.completed ? 'Concluído' : `+${xpValue} XP`}
                         </span>
                         {item.completed && <Sparkles size={10} className="text-emerald-400 animate-pulse" />}
+                        {isChallenge && !item.completed && <TrophyIcon size={10} className="text-amber-500" />}
                      </div>
                    </div>
                 </div>
                 
                 {isJustCompleted && (
                   <div className="absolute left-1/2 -top-6 -translate-x-1/2 pointer-events-none z-20 flex flex-col items-center gap-1">
-                     <div className="bg-emerald-500 text-white text-[10px] font-black px-4 py-1.5 rounded-full shadow-lg flex items-center gap-1.5 animate-bounce">
-                        <Zap size={10} className="fill-white" /> +50 XP
+                     <div className={`bg-emerald-500 text-white text-[10px] font-black px-4 py-1.5 rounded-full shadow-lg flex items-center gap-1.5 animate-bounce`}>
+                        <Zap size={10} className="fill-white" /> +{xpValue} XP
                      </div>
                      <div className="flex gap-1">
                         {[1, 2, 3].map(i => (
@@ -274,6 +368,55 @@ const RoutineTracker: React.FC<RoutineTrackerProps> = ({ routines, userProfile, 
                 </div>
              </div>
           </div>
+        </div>
+      </div>
+
+      {/* Weekly Challenge Section */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between px-2">
+           <div className="flex items-center gap-2">
+              <TrophyIcon size={16} className="text-amber-500 fill-amber-500" />
+              <h2 className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">Desafio Semanal</h2>
+           </div>
+           <div className="flex items-center gap-1.5 px-3 py-1 bg-slate-100 dark:bg-slate-800 rounded-full">
+              <Timer size={10} className="text-slate-400" />
+              <span className="text-[9px] font-black text-slate-400 uppercase">Expira em 4 dias</span>
+           </div>
+        </div>
+        
+        <div className={`relative overflow-hidden p-6 rounded-[2.5rem] border-2 ${challenge.accent} bg-white dark:bg-slate-900 shadow-lg group`}>
+           <div className="absolute top-0 right-0 p-6 opacity-10 group-hover:scale-110 transition-transform duration-500">
+              <challenge.icon size={120} />
+           </div>
+           
+           <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+              <div className="flex items-start gap-5">
+                 <div className={`w-16 h-16 rounded-3xl ${challenge.bg} ${challenge.color} flex items-center justify-center shrink-0 shadow-sm border ${challenge.accent}`}>
+                    <challenge.icon size={32} />
+                 </div>
+                 <div>
+                    <h3 className="text-xl font-black text-slate-800 dark:text-white mb-1">{challenge.title}</h3>
+                    <p className="text-sm font-bold text-slate-500 dark:text-slate-400 max-w-sm leading-relaxed">
+                      {challenge.desc}
+                    </p>
+                    <div className="flex items-center gap-2 mt-3">
+                       <div className="bg-emerald-500/10 text-emerald-500 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-tighter flex items-center gap-1">
+                          <Zap size={10} className="fill-emerald-500" /> +{challenge.reward} XP Bônus
+                       </div>
+                       <div className="bg-indigo-500/10 text-indigo-500 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-tighter flex items-center gap-1">
+                          <TrophyIcon size={10} /> Emblema Exclusivo
+                       </div>
+                    </div>
+                 </div>
+              </div>
+              
+              <button 
+                onClick={() => handleAddItem(challenge.title, true)}
+                className="px-8 py-4 bg-slate-900 dark:bg-indigo-600 text-white font-black text-xs uppercase tracking-widest rounded-2xl shadow-xl hover:scale-105 active:scale-95 transition-all"
+              >
+                Aceitar Desafio
+              </button>
+           </div>
         </div>
       </div>
 
