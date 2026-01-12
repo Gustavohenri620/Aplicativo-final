@@ -14,7 +14,10 @@ import {
   Target,
   LogOut,
   CalendarDays,
-  Phone
+  Phone,
+  CloudLightning,
+  CloudOff,
+  CloudUpload
 } from 'lucide-react';
 import { UserProfile } from '../types';
 
@@ -26,6 +29,7 @@ interface LayoutProps {
   userProfile: UserProfile;
   onUpdateProfile: (name: string, photo: string, goal: string, whatsapp: string) => void;
   onLogout: () => void;
+  isSyncing?: boolean;
 }
 
 const Layout: React.FC<LayoutProps> = ({ 
@@ -35,7 +39,8 @@ const Layout: React.FC<LayoutProps> = ({
   onAddClick,
   userProfile,
   onUpdateProfile,
-  onLogout
+  onLogout,
+  isSyncing = false
 }) => {
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   
@@ -148,13 +153,28 @@ const Layout: React.FC<LayoutProps> = ({
            <h1 className="text-lg font-black text-white tracking-tight">Finance&Routine</h1>
         </div>
         
-        <button 
-          onClick={onLogout}
-          className="flex items-center gap-2 px-3 py-1.5 bg-slate-900 hover:bg-rose-900/20 text-slate-400 hover:text-rose-400 rounded-xl border border-slate-800 hover:border-rose-900/50 transition-all font-bold text-xs"
-        >
-          <LogOut size={14} />
-          <span>Sair</span>
-        </button>
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-900 rounded-xl border border-slate-800">
+            {isSyncing ? (
+              <>
+                <CloudUpload size={14} className="text-indigo-400 animate-pulse" />
+                <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">Sincronizando...</span>
+              </>
+            ) : (
+              <>
+                <CloudLightning size={14} className="text-emerald-500" />
+                <span className="text-[10px] font-black text-emerald-500 uppercase tracking-widest">Salvo em Nuvem</span>
+              </>
+            )}
+          </div>
+          <button 
+            onClick={onLogout}
+            className="flex items-center gap-2 px-3 py-1.5 bg-slate-900 hover:bg-rose-900/20 text-slate-400 hover:text-rose-400 rounded-xl border border-slate-800 hover:border-rose-900/50 transition-all font-bold text-xs"
+          >
+            <LogOut size={14} />
+            <span>Sair</span>
+          </button>
+        </div>
       </header>
 
       <aside className="hidden lg:block fixed left-0 top-0 bottom-0 w-72 bg-slate-900 border-r border-slate-800 z-50">

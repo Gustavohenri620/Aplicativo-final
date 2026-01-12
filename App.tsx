@@ -11,7 +11,7 @@ import FinancialCalendar from './components/FinancialCalendar';
 import Auth from './components/Auth';
 import { Transaction, Category, Budget, TransactionType, UserProfile, RoutineItem, TransactionStatus } from './types';
 import { DEFAULT_CATEGORIES } from './constants';
-import { X, Loader2, ArrowUpCircle, ArrowDownCircle, CheckCircle2, Trash2, Info, AlertCircle } from 'lucide-react';
+import { X, Loader2, CheckCircle2, Trash2, Info, AlertCircle, ArrowUpCircle, ArrowDownCircle } from 'lucide-react';
 import { supabase } from './supabase';
 
 interface Toast {
@@ -23,6 +23,7 @@ interface Toast {
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [loading, setLoading] = useState(true);
+  const [isSyncing, setIsSyncing] = useState(false);
   const [user, setUser] = useState<any>(null);
   const [toasts, setToasts] = useState<Toast[]>([]);
   
@@ -107,11 +108,13 @@ const App: React.FC = () => {
 
   const handleUpdateProfile = async (name: string, photo: string, goal: string, whatsapp: string) => {
     if (!user) return;
+    setIsSyncing(true);
     const updatedProfile = { id: user.id, email: user.email, full_name: name, avatar_url: photo, financial_goal: goal, whatsapp_number: whatsapp };
     setUserProfile(updatedProfile);
     const { error } = await supabase.from('profiles').upsert(updatedProfile);
-    if (!error) showToast('Perfil atualizado!');
-    else showToast('Erro ao atualizar perfil', 'error');
+    setIsSyncing(false);
+    if (!error) showToast('Perfil salvo automaticamente!');
+    else showToast('Erro ao sincronizar perfil', 'error');
   };
 
   const handleLogout = async () => {
@@ -124,83 +127,103 @@ const App: React.FC = () => {
   // Routine Actions
   const handleAddRoutine = async (item: Omit<RoutineItem, 'id' | 'created_at' | 'user_id'>) => {
     if (!user) return;
+    setIsSyncing(true);
     const newItem = { ...item, id: crypto.randomUUID(), user_id: user.id, created_at: new Date().toISOString() };
     setRoutines(prev => [...prev, newItem as RoutineItem]);
     const { error } = await supabase.from('routines').insert(newItem);
-    if (!error) showToast(`${item.type === 'TASK' ? 'Tarefa' : 'Treino'} adicionado!`);
+    setIsSyncing(false);
+    if (!error) showToast(`${item.type === 'TASK' ? 'Tarefa' : 'Treino'} salva automaticamente!`);
   };
 
   const handleToggleRoutine = async (id: string, completed: boolean) => {
+    setIsSyncing(true);
     setRoutines(prev => prev.map(r => r.id === id ? { ...r, completed } : r));
     const { error } = await supabase.from('routines').update({ completed }).eq('id', id);
-    if (!error) showToast(completed ? 'Concluído! 🚀' : 'Desmarcado');
+    setIsSyncing(false);
+    if (!error) showToast(completed ? 'Meta batida! Sincronizado. 🚀' : 'Atualizado automaticamente');
   };
 
   const handleDeleteRoutine = async (id: string) => {
+    setIsSyncing(true);
     setRoutines(prev => prev.filter(r => r.id !== id));
     const { error } = await supabase.from('routines').delete().eq('id', id);
-    if (!error) showToast('Item removido.', 'delete');
+    setIsSyncing(false);
+    if (!error) showToast('Removido e sincronizado.', 'delete');
   };
 
   // Finance Actions
   const handleAddTransaction = async (data: Omit<Transaction, 'id' | 'user_id'>) => {
     if (!user) return;
+    setIsSyncing(true);
     const newT = { ...data, id: crypto.randomUUID(), user_id: user.id, status: data.status || 'COMPLETED' };
     setTransactions(prev => [newT as Transaction, ...prev]);
     setIsFormOpen(false);
-    await supabase.from('transactions').insert(newT);
-    showToast('Transação registrada!');
+    const { error } = await supabase.from('transactions').insert(newT);
+    setIsSyncing(false);
+    if (!error) showToast('Atividade financeira salva!');
   };
 
   const handleUpdateTransaction = async (data: Omit<Transaction, 'id' | 'user_id'>) => {
     if (!editingTransaction || !user) return;
+    setIsSyncing(true);
     const updated = { ...data, id: editingTransaction.id, user_id: user.id };
     setTransactions(prev => prev.map(t => t.id === editingTransaction.id ? updated as Transaction : t));
     setEditingTransaction(undefined);
     setIsFormOpen(false);
-    await supabase.from('transactions').update(updated).eq('id', editingTransaction.id);
-    showToast('Transação atualizada!');
+    const { error } = await supabase.from('transactions').update(updated).eq('id', editingTransaction.id);
+    setIsSyncing(false);
+    if (!error) showToast('Lançamento atualizado e salvo!');
   };
 
   const handleToggleTransactionStatus = async (id: string, currentStatus: TransactionStatus) => {
+    setIsSyncing(true);
     const newStatus: TransactionStatus = currentStatus === 'COMPLETED' ? 'PENDING' : 'COMPLETED';
     setTransactions(prev => prev.map(t => t.id === id ? { ...t, status: newStatus } : t));
     const { error } = await supabase.from('transactions').update({ status: newStatus }).eq('id', id);
-    if (!error) showToast(newStatus === 'COMPLETED' ? 'Lançamento confirmado! ✅' : 'Lançamento pendente ⏳');
+    setIsSyncing(false);
+    if (!error) showToast(newStatus === 'COMPLETED' ? 'Concluído e sincronizado! ✅' : 'Status atualizado ⏳');
   };
 
   const handleDeleteTransaction = async (id: string) => {
     if (window.confirm('Excluir transação?')) {
+      setIsSyncing(true);
       setTransactions(prev => prev.filter(t => t.id !== id));
       await supabase.from('transactions').delete().eq('id', id);
-      showToast('Transação removida.', 'delete');
+      setIsSyncing(false);
+      showToast('Transação removida permanentemente.', 'delete');
     }
   };
 
   const handleSaveCategory = async (catData: Omit<Category, 'id'> & { id?: string }) => {
     if (!user) return;
+    setIsSyncing(true);
     const id = catData.id || crypto.randomUUID();
     const newCat = { ...catData, id, user_id: user.id };
     setCategories(prev => catData.id ? prev.map(c => c.id === id ? newCat : c) : [...prev, newCat]);
     await supabase.from('categories').upsert(newCat);
-    showToast('Categoria salva!');
+    setIsSyncing(false);
+    showToast('Categoria salva automaticamente!');
   };
 
   const handleDeleteCategory = async (id: string) => {
     if (window.confirm('Excluir categoria?')) {
+      setIsSyncing(true);
       setCategories(p => p.filter(c => c.id !== id));
       await supabase.from('categories').delete().eq('id', id);
-      showToast('Categoria removida.', 'delete');
+      setIsSyncing(false);
+      showToast('Categoria removida e sincronizada.', 'delete');
     }
   };
 
   const handleSaveBudget = async (budgetData: Omit<Budget, 'id' | 'user_id'>) => {
     if (!user) return;
+    setIsSyncing(true);
     const id = crypto.randomUUID();
     const newB = { ...budgetData, id, user_id: user.id };
     setBudgets(prev => [...prev.filter(b => b.category_id !== budgetData.category_id), newB as Budget]);
     await supabase.from('budgets').upsert(newB);
-    showToast('Meta de gastos atualizada!');
+    setIsSyncing(false);
+    showToast('Planejamento salvo e atualizado!');
   };
 
   if (loading) return <div className="flex items-center justify-center min-h-screen bg-slate-950 text-indigo-500"><Loader2 className="animate-spin" size={48} /></div>;
@@ -220,7 +243,15 @@ const App: React.FC = () => {
   };
 
   return (
-    <Layout activeTab={activeTab} setActiveTab={setActiveTab} onAddClick={() => { setPrefilledDate(undefined); setIsAddMenuOpen(true); }} userProfile={userProfile || { id: user.id, email: user.email }} onUpdateProfile={handleUpdateProfile} onLogout={handleLogout}>
+    <Layout 
+      activeTab={activeTab} 
+      setActiveTab={setActiveTab} 
+      onAddClick={() => { setPrefilledDate(undefined); setIsAddMenuOpen(true); }} 
+      userProfile={userProfile || { id: user.id, email: user.email }} 
+      onUpdateProfile={handleUpdateProfile} 
+      onLogout={handleLogout}
+      isSyncing={isSyncing}
+    >
       {renderContent()}
       <div className="fixed top-20 right-4 left-4 sm:left-auto sm:right-6 sm:w-80 z-[100] flex flex-col gap-3 pointer-events-none">
         {toasts.map(t => (
