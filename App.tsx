@@ -136,7 +136,8 @@ const App: React.FC = () => {
     if (!user) return;
     setIsSyncing(true);
     
-    const profileToSave = {
+    // Objeto limpo para evitar erros de integridade
+    const updatePayload = {
       id: user.id,
       email: user.email,
       full_name: name,
@@ -147,20 +148,25 @@ const App: React.FC = () => {
     };
     
     try {
+      // Upsert atômico sem depender de resposta select anterior imediata para evitar race conditions
       const { data, error } = await supabase
         .from('profiles')
-        .upsert(profileToSave, { onConflict: 'id' })
+        .upsert(updatePayload, { onConflict: 'id' })
         .select()
         .single();
 
       if (error) throw error;
       
-      setUserProfile(data || profileToSave);
+      setUserProfile(data || updatePayload);
       updateSyncStamp();
-      showToast('Perfil salvo com sucesso!');
+      showToast('Perfil sincronizado com a nuvem!');
     } catch (error: any) {
       console.error('Erro ao salvar perfil:', error);
-      showToast('Ocorreu um erro ao salvar na nuvem.', 'error');
+      if (error.code === '413') {
+        showToast('A imagem é muito grande para o servidor.', 'error');
+      } else {
+        showToast('Falha na sincronização do perfil.', 'error');
+      }
       throw error; 
     } finally {
       setIsSyncing(false);
@@ -451,7 +457,7 @@ const App: React.FC = () => {
       {isAddMenuOpen && (
          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200">
             <div className="absolute inset-0" onClick={() => setIsAddMenuOpen(false)} />
-            <div className="relative w-full max-w-sm bg-white dark:bg-slate-900 rounded-t-[2rem] sm:rounded-[2rem] p-6 shadow-2xl animate-in slide-in-from-bottom duration-300">
+            <div className="relative w-full max-sm bg-white dark:bg-slate-900 rounded-t-[2rem] sm:rounded-[2rem] p-6 shadow-2xl animate-in slide-in-from-bottom duration-300">
                <div className="flex justify-between items-center mb-8">
                   <div>
                     <h3 className="text-xl font-bold dark:text-white">Novo Lançamento</h3>
