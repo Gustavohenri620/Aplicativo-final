@@ -338,7 +338,7 @@ const RoutineTracker: React.FC<RoutineTrackerProps> = ({ routines, userProfile, 
                    <span className="text-xl sm:text-2xl font-black text-slate-800 dark:text-white leading-none tracking-tighter">
                      {Math.round(dailyProgress)}%
                    </span>
-                   <span className="text-[8px] font-black text-emerald-500 uppercase tracking-tighter">Status</span>
+                   <span className="text-[8px] font-black text-emerald-500 uppercase tracking-tighter">Meta</span>
                 </div>
              </div>
              
@@ -350,8 +350,23 @@ const RoutineTracker: React.FC<RoutineTrackerProps> = ({ routines, userProfile, 
                    </div>
                 </div>
                 <p className="text-sm font-bold text-slate-500 dark:text-slate-400 mb-4">{motivationMessage}</p>
-                <div className="w-full max-w-xs">
-                   <div className="flex justify-between items-end mb-1">
+                
+                {/* Nova Barra de Progresso Linear Animada */}
+                <div className="w-full max-w-sm mb-4 group/progress">
+                   <div className="flex justify-between items-end mb-1.5 px-0.5">
+                      <span className="text-[9px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-[0.15em]">Progresso do Dia</span>
+                      <span className="text-[10px] font-black text-slate-400">{completedItems.length} de {totalItems} metas</span>
+                   </div>
+                   <div className="h-2.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden p-0.5 shadow-inner">
+                      <div 
+                        className={`h-full rounded-full transition-all duration-1000 ease-out shadow-[0_0_8px_rgba(16,185,129,0.2)] ${dailyProgress === 100 ? 'bg-gradient-to-r from-emerald-400 to-emerald-600 animate-pulse' : 'bg-emerald-500'}`} 
+                        style={{ width: `${dailyProgress}%` }} 
+                      />
+                   </div>
+                </div>
+
+                <div className="w-full max-w-sm">
+                   <div className="flex justify-between items-end mb-1 px-0.5">
                       <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Nível {level}</span>
                       <span className="text-[10px] font-black text-emerald-600">{xpInLevel}/500 XP</span>
                    </div>
