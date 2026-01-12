@@ -94,15 +94,44 @@ const Layout: React.FC<LayoutProps> = ({
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      // Removido limite restritivo de tamanho por solicitação do usuário.
-      // Imagens muito grandes podem ser lentas para salvar como Base64, mas agora são permitidas.
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setTempPhoto(reader.result as string);
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        // Lógica de redimensionamento para suportar qualquer tamanho de arquivo
+        const canvas = document.createElement('canvas');
+        const MAX_WIDTH = 1024;
+        const MAX_HEIGHT = 1024;
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height) {
+          if (width > MAX_WIDTH) {
+            height *= MAX_WIDTH / width;
+            width = MAX_WIDTH;
+          }
+        } else {
+          if (height > MAX_HEIGHT) {
+            width *= MAX_HEIGHT / height;
+            height = MAX_HEIGHT;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, width, height);
+          // Converte para JPEG com compressão para garantir que caiba no banco de dados sem erro
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+          setTempPhoto(dataUrl);
+        }
       };
-      reader.readAsDataURL(file);
-    }
+      img.src = event.target?.result as string;
+    };
+    reader.readAsDataURL(file);
   };
 
   const SidebarContent = () => (
