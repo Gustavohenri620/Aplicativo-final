@@ -54,7 +54,7 @@ const Layout: React.FC<LayoutProps> = ({
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   
-  // Sincronizar estados temporários quando o modal abrir
+  // Sincronizar estados temporários quando o modal abrir ou o perfil for atualizado externamente
   useEffect(() => {
     if (isProfileModalOpen) {
       setTempName(userProfile.full_name || '');
@@ -84,21 +84,23 @@ const Layout: React.FC<LayoutProps> = ({
     e.preventDefault();
     if (isSyncing) return;
     
-    // Chamar função de atualização e aguardar confirmação antes de fechar
     try {
+      // Chamar função de atualização e aguardar confirmação antes de fechar
       await onUpdateProfile(tempName, tempPhoto, tempGoal, tempWhatsapp);
+      // Somente fechar se não houver erro lançado pelo App.tsx
       setIsProfileModalOpen(false);
     } catch (err) {
-      // O erro já é tratado no App.tsx via Toast
       console.error("Falha ao salvar perfil no Layout:", err);
+      // O modal permanece aberto para o usuário tentar novamente ou corrigir dados
     }
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (file.size > 1024 * 512) { 
-        alert("A foto é muito grande. Escolha uma imagem de até 500KB.");
+      // Limite de 1MB para base64 em campos de texto simples no DB
+      if (file.size > 1024 * 1024) { 
+        alert("A foto é muito grande. Escolha uma imagem de até 1MB.");
         return;
       }
       const reader = new FileReader();
@@ -225,6 +227,7 @@ const Layout: React.FC<LayoutProps> = ({
               <button 
                 onClick={() => !isSyncing && setIsProfileModalOpen(false)} 
                 className="p-2 -mr-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                disabled={isSyncing}
               >
                 <X size={20} />
               </button>
@@ -233,7 +236,7 @@ const Layout: React.FC<LayoutProps> = ({
             <form onSubmit={handleSaveProfile} className="p-6 space-y-6">
               <div className="flex flex-col items-center gap-4">
                 <div 
-                  className="relative group cursor-pointer"
+                  className={`relative group ${isSyncing ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}
                   onClick={() => !isSyncing && fileInputRef.current?.click()}
                 >
                   <div className="w-24 h-24 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden border-4 border-slate-50 dark:border-slate-700 shadow-sm">
@@ -254,6 +257,7 @@ const Layout: React.FC<LayoutProps> = ({
                     onChange={handleFileChange} 
                     accept="image/*" 
                     className="hidden" 
+                    disabled={isSyncing}
                   />
                 </div>
                 <p className="text-sm text-slate-500 font-medium">Trocar Foto</p>

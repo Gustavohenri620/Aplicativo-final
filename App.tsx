@@ -88,7 +88,7 @@ const App: React.FC = () => {
   const fetchInitialData = async (userId: string, email: string) => {
     setLoading(true);
     try {
-      const { data: profileData, error: profileError } = await supabase
+      const { data: profileData } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', userId)
@@ -98,7 +98,15 @@ const App: React.FC = () => {
       if (profileData) {
         currentProfile = profileData;
       } else {
-        currentProfile = { id: userId, email: email, full_name: email.split('@')[0], xp: 0 };
+        currentProfile = { 
+          id: userId, 
+          email: email, 
+          full_name: email.split('@')[0], 
+          xp: 0,
+          avatar_url: '',
+          financial_goal: '',
+          whatsapp_number: ''
+        };
         await supabase.from('profiles').upsert(currentProfile);
       }
       setUserProfile(currentProfile);
@@ -128,26 +136,34 @@ const App: React.FC = () => {
     if (!user) return;
     setIsSyncing(true);
     
-    const updatedProfile: UserProfile = { 
-      ...userProfile,
-      id: user.id, 
-      email: user.email, 
-      full_name: name, 
-      avatar_url: photo, 
-      financial_goal: goal, 
-      whatsapp_number: whatsapp 
+    // Objeto limpo para o Supabase
+    const profileToSave = {
+      id: user.id,
+      email: user.email,
+      full_name: name,
+      avatar_url: photo,
+      financial_goal: goal,
+      whatsapp_number: whatsapp,
+      xp: userProfile?.xp || 0 // Preservar XP atual
     };
     
     try {
-      const { error } = await supabase.from('profiles').upsert(updatedProfile);
+      // Upsert explícito com retorno do dado atualizado
+      const { data, error } = await supabase
+        .from('profiles')
+        .upsert(profileToSave, { onConflict: 'id' })
+        .select()
+        .single();
+
       if (error) throw error;
       
-      setUserProfile(updatedProfile);
+      // Atualizar estado com o que veio do banco (garante sincronia)
+      setUserProfile(data || profileToSave);
       updateSyncStamp();
-      showToast('Perfil salvo na nuvem!');
+      showToast('Perfil salvo com sucesso!');
     } catch (error: any) {
       console.error('Erro ao salvar perfil:', error);
-      showToast('Falha ao salvar perfil.', 'error');
+      showToast('Falha ao salvar perfil. Verifique sua conexão.', 'error');
       throw error; 
     } finally {
       setIsSyncing(false);
