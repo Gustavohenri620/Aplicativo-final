@@ -1,7 +1,7 @@
 
-import React, { useState, useEffect } from 'react';
-import { X, Calendar, Tag, Check, CreditCard, MoreHorizontal, CheckCircle2, AlertCircle } from 'lucide-react';
-import { Transaction, Category, TransactionType, ExpenseType, IncomeType, TransactionStatus } from '../types';
+import React, { useState } from 'react';
+import { X, Calendar, Tag, Check, CreditCard, MoreHorizontal } from 'lucide-react';
+import { Transaction, Category, TransactionType, ExpenseType, IncomeType } from '../types';
 import { PAYMENT_METHODS, ICON_MAP } from '../constants';
 
 interface TransactionFormProps {
@@ -10,32 +10,17 @@ interface TransactionFormProps {
   onSubmit: (transaction: Omit<Transaction, 'id' | 'user_id'>) => void;
   onClose: () => void;
   initialData?: Transaction;
-  prefilledDate?: string;
 }
 
-const TransactionForm: React.FC<TransactionFormProps> = ({ 
-  type, 
-  categories, 
-  onSubmit, 
-  onClose, 
-  initialData, 
-  prefilledDate
-}) => {
+const TransactionForm: React.FC<TransactionFormProps> = ({ type, categories, onSubmit, onClose, initialData }) => {
   const [description, setDescription] = useState(initialData?.description || '');
   const [amount, setAmount] = useState(initialData?.amount?.toString() || '');
-  const [date, setDate] = useState(initialData?.date || prefilledDate || new Date().toISOString().split('T')[0]);
+  const [date, setDate] = useState(initialData?.date || new Date().toISOString().split('T')[0]);
   const [categoryId, setCategoryId] = useState(initialData?.category_id || (categories.length > 0 ? categories[0].id : ''));
   const [expenseType, setExpenseType] = useState<ExpenseType>(initialData?.expense_type || 'VARIABLE');
   const [incomeType, setIncomeType] = useState<IncomeType>(initialData?.income_type || 'SALARY');
   const [paymentMethod, setPaymentMethod] = useState(initialData?.payment_method || PAYMENT_METHODS[0]);
   const [recurring, setRecurring] = useState(initialData?.recurring || false);
-  const [status, setStatus] = useState<TransactionStatus>(initialData?.status || 'COMPLETED');
-
-  useEffect(() => {
-    if (prefilledDate && !initialData) {
-      setDate(prefilledDate);
-    }
-  }, [prefilledDate, initialData]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,8 +36,8 @@ const TransactionForm: React.FC<TransactionFormProps> = ({
       income_type: type === 'INCOME' ? incomeType : undefined,
       payment_method: paymentMethod,
       recurring,
-      status,
     });
+    onClose();
   };
 
   const themeColor = type === 'INCOME' ? 'text-emerald-600' : 'text-rose-600';
@@ -61,7 +46,7 @@ const TransactionForm: React.FC<TransactionFormProps> = ({
   const borderColor = type === 'INCOME' ? 'border-emerald-100 dark:border-emerald-900/50' : 'border-rose-100 dark:border-rose-900/50';
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center sm:p-4 bg-slate-950/60 backdrop-blur-sm animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center sm:p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
       <div 
         className="w-full sm:max-w-lg bg-white dark:bg-slate-900 rounded-t-[2rem] sm:rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col max-h-[90vh] sm:max-h-auto animate-in slide-in-from-bottom duration-300"
         onClick={(e) => e.stopPropagation()}
@@ -74,7 +59,7 @@ const TransactionForm: React.FC<TransactionFormProps> = ({
           <h2 className="text-lg font-bold text-slate-800 dark:text-white">
             {initialData ? 'Editar' : 'Nova'} {type === 'INCOME' ? 'Receita' : 'Despesa'}
           </h2>
-          <div className="w-10"></div>
+          <div className="w-10"></div> {/* Spacer for center alignment */}
         </div>
 
         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto no-scrollbar">
@@ -143,33 +128,12 @@ const TransactionForm: React.FC<TransactionFormProps> = ({
                </div>
             </div>
 
-            {/* Status Selector */}
-            <div className="bg-slate-50 dark:bg-slate-800 p-4 rounded-2xl">
-              <label className="block text-xs font-bold text-slate-400 mb-3 uppercase tracking-widest">Status da Atividade</label>
-              <div className="flex gap-2">
-                <button 
-                  type="button"
-                  onClick={() => setStatus('COMPLETED')}
-                  className={`flex-1 py-3 rounded-xl font-bold text-xs uppercase transition-all flex items-center justify-center gap-2 ${status === 'COMPLETED' ? 'bg-emerald-500 text-white shadow-lg' : 'bg-slate-100 dark:bg-slate-700 text-slate-400'}`}
-                >
-                  <CheckCircle2 size={16} /> Finalizado
-                </button>
-                <button 
-                  type="button"
-                  onClick={() => setStatus('PENDING')}
-                  className={`flex-1 py-3 rounded-xl font-bold text-xs uppercase transition-all flex items-center justify-center gap-2 ${status === 'PENDING' ? 'bg-amber-500 text-white shadow-lg' : 'bg-slate-100 dark:bg-slate-700 text-slate-400'}`}
-                >
-                  <AlertCircle size={16} /> Pendente
-                </button>
-              </div>
-            </div>
-
             {/* Category Grid Selection */}
             <div>
                <label className="flex items-center gap-2 text-sm font-bold text-slate-700 dark:text-slate-300 mb-3">
                  <Tag size={16} /> Categoria
                </label>
-               <div className="grid grid-cols-4 gap-3 max-h-40 overflow-y-auto no-scrollbar pr-1">
+               <div className="grid grid-cols-4 sm:grid-cols-4 gap-3 max-h-48 overflow-y-auto pr-1">
                  {categories.map((cat) => {
                    const Icon = ICON_MAP[cat.icon] || MoreHorizontal;
                    const isSelected = categoryId === cat.id;
@@ -252,9 +216,9 @@ const TransactionForm: React.FC<TransactionFormProps> = ({
           <div className="p-6 pt-2 pb-8 sm:pb-6 bg-white dark:bg-slate-900 border-t border-slate-50 dark:border-slate-800">
              <button
               type="submit"
-              className={`w-full py-4 text-white text-lg font-bold rounded-2xl shadow-lg transition-all active:scale-[0.98] flex items-center justify-center gap-3 ${bgColor} ${type === 'INCOME' ? 'shadow-emerald-200 dark:shadow-none' : 'shadow-rose-200 dark:shadow-none'}`}
+              className={`w-full py-4 text-white text-lg font-bold rounded-2xl shadow-lg transition-transform active:scale-[0.98] ${bgColor} ${type === 'INCOME' ? 'shadow-emerald-200 dark:shadow-none' : 'shadow-rose-200 dark:shadow-none'}`}
             >
-              {initialData ? 'Atualizar Transação' : 'Salvar Lançamento'}
+              {initialData ? 'Atualizar Transação' : 'Confirmar'}
             </button>
           </div>
         </form>

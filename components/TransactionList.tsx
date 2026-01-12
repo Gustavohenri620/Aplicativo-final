@@ -13,11 +13,9 @@ import {
   SlidersHorizontal,
   ArrowUpDown,
   X,
-  RotateCcw,
-  CheckCircle2,
-  AlertCircle
+  RotateCcw
 } from 'lucide-react';
-import { Transaction, Category, TransactionType, TransactionStatus } from '../types';
+import { Transaction, Category, TransactionType } from '../types';
 import { PAYMENT_METHODS } from '../constants';
 
 interface TransactionListProps {
@@ -27,12 +25,11 @@ interface TransactionListProps {
   onAdd: () => void;
   onEdit: (transaction: Transaction) => void;
   onDelete: (id: string) => void;
-  onToggleStatus?: (id: string, currentStatus: TransactionStatus) => void;
 }
 
 type SortOption = 'date-desc' | 'date-asc' | 'amount-desc' | 'amount-asc';
 
-const TransactionList: React.FC<TransactionListProps> = ({ type, transactions, categories, onAdd, onEdit, onDelete, onToggleStatus }) => {
+const TransactionList: React.FC<TransactionListProps> = ({ type, transactions, categories, onAdd, onEdit, onDelete }) => {
   const [searchTerm, setSearchTerm] = useState('');
   
   // Advanced Filters State
@@ -250,48 +247,52 @@ const TransactionList: React.FC<TransactionListProps> = ({ type, transactions, c
             <div className="space-y-2">
               {filteredTransactions.map((t) => {
                 const category = categories.find(c => c.id === t.category_id);
-                const isCompleted = t.status === 'COMPLETED';
                 return (
                   <div 
                     key={t.id} 
-                    className={`group p-4 rounded-2xl border transition-all flex items-center justify-between gap-4 ${isCompleted ? 'bg-slate-50/50 dark:bg-slate-800/20 border-transparent opacity-80' : 'bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800 hover:border-indigo-200 dark:hover:border-indigo-900/50 hover:shadow-md'}`}
+                    className="group bg-white dark:bg-slate-900 sm:bg-slate-50 sm:dark:bg-slate-800/50 p-4 rounded-2xl border border-slate-100 sm:border-transparent dark:border-slate-800 hover:border-indigo-200 dark:hover:border-indigo-900/50 transition-all hover:shadow-md flex items-center justify-between gap-4"
                   >
                     <div className="flex items-center gap-4 overflow-hidden">
-                      {/* Checkbox para conclusão rápida (Auto-Save) */}
-                      {onToggleStatus && (
-                        <button 
-                          onClick={() => onToggleStatus(t.id, t.status)}
-                          className={`shrink-0 w-8 h-8 rounded-xl flex items-center justify-center transition-all ${isCompleted ? 'bg-emerald-500 text-white' : 'bg-slate-100 dark:bg-slate-800 text-transparent border-2 border-slate-200 dark:border-slate-700'}`}
-                        >
-                          <CheckCircle2 size={16} className={isCompleted ? 'opacity-100' : 'opacity-0'} />
-                        </button>
-                      )}
-
+                      {/* Ícone da Categoria/Tipo */}
+                      <div 
+                        className={`w-12 h-12 shrink-0 rounded-2xl flex items-center justify-center text-xl font-bold text-white shadow-sm`}
+                        style={{ backgroundColor: category?.color || '#94a3b8' }}
+                      >
+                         {category?.name.charAt(0)}
+                      </div>
+                      
                       <div className="min-w-0">
-                        <h4 className={`font-bold truncate text-base mb-0.5 ${isCompleted ? 'line-through text-slate-400' : 'text-slate-800 dark:text-white'}`}>{t.description}</h4>
-                        <div className="flex items-center gap-3 text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase tracking-widest">
-                           <span className="flex items-center gap-1"><Tag size={10}/> {category?.name}</span>
+                        <h4 className="font-bold text-slate-800 dark:text-white truncate text-base mb-0.5">{t.description}</h4>
+                        <div className="flex items-center gap-3 text-xs text-slate-500 dark:text-slate-400 font-medium">
+                           <span className="flex items-center gap-1"><Tag size={12}/> {category?.name}</span>
                            <span className="w-1 h-1 bg-slate-300 rounded-full"></span>
-                           <span className="flex items-center gap-1"><Calendar size={10}/> {new Date(t.date).toLocaleDateString('pt-BR', {day: '2-digit', month: 'short'})}</span>
+                           <span className="flex items-center gap-1"><Calendar size={12}/> {new Date(t.date).toLocaleDateString('pt-BR', {day: '2-digit', month: 'short'})}</span>
+                           <span className="hidden sm:inline-flex items-center gap-1 ml-2"><CreditCard size={12}/> {t.payment_method}</span>
+                           {t.recurring && (
+                             <>
+                               <span className="w-1 h-1 bg-slate-300 rounded-full"></span>
+                               <span className="text-indigo-500">Recorrente</span>
+                             </>
+                           )}
                         </div>
                       </div>
                     </div>
 
                     <div className="text-right shrink-0 flex flex-col items-end gap-1">
-                      <span className={`text-lg font-black tracking-tight ${isCompleted ? 'text-slate-400' : type === 'INCOME' ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
+                      <span className={`text-lg font-black tracking-tight ${type === 'INCOME' ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
                         {type === 'INCOME' ? '+' : '-'} R$ {t.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                       </span>
                       
-                      <div className="flex items-center gap-1 mt-1">
+                      <div className="flex items-center gap-1 mt-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                          <button 
                             onClick={() => onEdit(t)}
-                            className="p-1.5 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg"
+                            className="p-1.5 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg"
                          >
                             <Edit2 size={16} />
                          </button>
                          <button 
                             onClick={() => onDelete(t.id)}
-                            className="p-1.5 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg"
+                            className="p-1.5 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg"
                          >
                             <Trash2 size={16} />
                          </button>

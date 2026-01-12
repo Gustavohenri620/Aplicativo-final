@@ -1,24 +1,17 @@
 
-import React, { useState } from 'react';
+import React from 'react';
 import { 
-  BarChart, Bar, XAxis, Tooltip, ResponsiveContainer, Cell,
-  PieChart, Pie, ReferenceArea
+  PieChart, Pie, Cell, ResponsiveContainer, 
+  BarChart, Bar, XAxis, YAxis, Tooltip, 
+  AreaChart, Area 
 } from 'recharts';
 import { 
   Wallet, TrendingUp, TrendingDown, 
   AlertCircle, ArrowRight, Clock, 
-  Calendar, CreditCard,
-  Target, User, Edit2, Activity,
-  ArrowUpRight, ArrowDownRight,
-  X, ChevronRight,
-  MoreHorizontal,
-  CalendarClock,
-  ArrowRightCircle,
-  ShieldCheck,
-  Zap
+  ArrowDownLeft, Calendar, CreditCard, Tag,
+  Target, User, Edit2
 } from 'lucide-react';
 import { Transaction, Category, UserProfile } from '../types';
-import { ICON_MAP } from '../constants';
 
 interface DashboardProps {
   transactions: Transaction[];
@@ -29,10 +22,7 @@ interface DashboardProps {
 }
 
 const Dashboard: React.FC<DashboardProps> = ({ transactions, categories, setActiveTab, userProfile, onOpenProfile }) => {
-  const [selectedDay, setSelectedDay] = useState<string | null>(null);
-  
   const now = new Date();
-  now.setHours(0, 0, 0, 0);
   const currentMonth = now.getMonth();
   const currentYear = now.getFullYear();
 
@@ -50,266 +40,257 @@ const Dashboard: React.FC<DashboardProps> = ({ transactions, categories, setActi
     .reduce((acc, t) => acc + t.amount, 0);
   
   const balance = income - expenses;
+  const commitmentRatio = income > 0 ? (expenses / income) * 100 : (expenses > 0 ? 100 : 0);
   const healthScore = Math.max(0, Math.min(100, (1 - expenses / (income || 1)) * 100));
 
-  // Weekly Flow Data
-  const weeklyData = Array.from({ length: 7 }).map((_, i) => {
-    const d = new Date();
-    d.setDate(d.getDate() - (6 - i));
-    const dateStr = d.toISOString().split('T')[0];
-    const dayTransactions = transactions.filter(t => t.date === dateStr);
-    
+  // Category Distribution
+  const categoryData = categories.map(cat => {
+    const total = currentMonthTransactions
+      .filter(t => t.category_id === cat.id && t.type === 'EXPENSE')
+      .reduce((acc, t) => acc + t.amount, 0);
+    return { name: cat.name, value: total, color: cat.color };
+  }).filter(c => c.value > 0);
+
+  // Daily Spending Trend (Last 7 days)
+  const last7DaysData = Array.from({ length: 7 }).map((_, i) => {
+    const date = new Date();
+    date.setDate(date.getDate() - (6 - i));
+    const dateStr = date.toISOString().split('T')[0];
+    const dayTotal = transactions
+      .filter(t => t.type === 'EXPENSE' && t.date === dateStr)
+      .reduce((acc, t) => acc + t.amount, 0);
     return {
-      name: d.toLocaleDateString('pt-BR', { weekday: 'short' }).toUpperCase(),
-      fullDate: dateStr,
-      displayDate: d.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'short' }),
-      receitas: dayTransactions.filter(t => t.type === 'INCOME').reduce((acc, t) => acc + t.amount, 0),
-      despesas: dayTransactions.filter(t => t.type === 'EXPENSE').reduce((acc, t) => acc + t.amount, 0),
+      name: date.toLocaleDateString('pt-BR', { weekday: 'short' }),
+      total: dayTotal,
     };
   });
 
-  const weeklyTotalIncome = weeklyData.reduce((acc, d) => acc + d.receitas, 0);
-  const weeklyTotalExpenses = weeklyData.reduce((acc, d) => acc + d.despesas, 0);
-
-  // Upcoming Transactions
-  const upcomingTransactions = transactions
-    .filter(t => {
-      const tDate = new Date(t.date);
-      tDate.setHours(0,0,0,0);
-      return tDate >= now;
-    })
-    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+  // Detailed Recent Expenses (last 6)
+  const recentExpenses = transactions
+    .filter(t => t.type === 'EXPENSE')
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
     .slice(0, 6);
 
-  const recentExpenses = transactions
-    .filter(t => t.type === 'EXPENSE' && new Date(t.date) < now)
-    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-    .slice(0, 5);
-
-  const formatDateLabel = (dateStr: string) => {
-    const date = new Date(dateStr);
-    date.setHours(0,0,0,0);
-    const diff = Math.ceil((date.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-    if (diff === 0) return 'Hoje';
-    if (diff === 1) return 'Amanhã';
-    return date.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
-  };
+  const last6MonthsData = Array.from({ length: 6 }).map((_, i) => {
+    const date = new Date();
+    date.setMonth(date.getMonth() - (5 - i));
+    const m = date.getMonth();
+    const y = date.getFullYear();
+    const monthTransactions = transactions.filter(t => {
+      const d = new Date(t.date);
+      return d.getMonth() === m && d.getFullYear() === y;
+    });
+    return {
+      month: date.toLocaleDateString('pt-BR', { month: 'short' }),
+      receitas: monthTransactions.filter(t => t.type === 'INCOME').reduce((acc, t) => acc + t.amount, 0),
+      despesas: monthTransactions.filter(t => t.type === 'EXPENSE').reduce((acc, t) => acc + t.amount, 0),
+    };
+  });
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500">
-      {/* MEGA HEADER: SALDO EM DESTAQUE */}
-      <div className="relative overflow-hidden bg-indigo-600 rounded-[3rem] p-8 sm:p-12 shadow-2xl shadow-indigo-500/30 group">
-        <div className="absolute top-0 right-0 p-12 opacity-10 group-hover:scale-110 transition-transform duration-1000">
-          <Wallet size={300} />
+    <div className="space-y-6 animate-in fade-in duration-500">
+      <div 
+        onClick={onOpenProfile}
+        className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 bg-white dark:bg-slate-900 p-6 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/80 transition-colors group relative"
+      >
+        <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
+          <Edit2 size={18} className="text-slate-400" />
         </div>
-        <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-8">
+        
+        <div className="flex items-center gap-4">
+          <div className="w-16 h-16 rounded-2xl bg-slate-100 dark:bg-slate-800 overflow-hidden border-4 border-slate-50 dark:border-slate-700 shadow-sm shrink-0 group-hover:border-indigo-100 dark:group-hover:border-slate-600 transition-colors">
+            {userProfile?.avatar_url ? (
+              <img src={userProfile.avatar_url} alt="Profile" className="w-full h-full object-cover" />
+            ) : (
+              <User size={32} className="text-slate-300 w-full h-full p-4" />
+            )}
+          </div>
           <div>
-            <div className="flex items-center gap-3 mb-4">
-              <div className="p-3 bg-white/20 backdrop-blur-md rounded-2xl text-white">
-                <ShieldCheck size={28} />
-              </div>
-              <span className="text-white/70 text-sm font-black uppercase tracking-widest">Saldo Atual Disponível</span>
+            <div className="flex items-center gap-2">
+              <h1 className="text-2xl font-bold text-slate-800 dark:text-white">
+                Olá, {userProfile?.full_name?.split(' ')[0] || 'Visitante'}! 👋
+              </h1>
             </div>
-            <h1 className="text-5xl sm:text-7xl font-black text-white tracking-tighter mb-2">
-              R$ {balance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-            </h1>
-            <div className="flex items-center gap-4 mt-6">
-              <div className="flex items-center gap-2 px-4 py-2 bg-white/10 backdrop-blur-md rounded-full border border-white/20">
-                <TrendingUp size={16} className="text-emerald-400" />
-                <span className="text-xs font-black text-white">+ R$ {income.toLocaleString('pt-BR')}</span>
-              </div>
-              <div className="flex items-center gap-2 px-4 py-2 bg-white/10 backdrop-blur-md rounded-full border border-white/20">
-                <TrendingDown size={16} className="text-rose-400" />
-                <span className="text-xs font-black text-white">- R$ {expenses.toLocaleString('pt-BR')}</span>
-              </div>
-            </div>
-          </div>
-          <div className="shrink-0 flex flex-col items-center gap-4">
-             <div className="w-24 h-24 bg-white/20 backdrop-blur-md rounded-3xl p-1 border border-white/30 shadow-xl overflow-hidden cursor-pointer hover:scale-105 transition-transform" onClick={onOpenProfile}>
-                {userProfile?.avatar_url ? (
-                  <img src={userProfile.avatar_url} alt="Profile" className="w-full h-full object-cover rounded-2xl" />
-                ) : (
-                  <User size={48} className="text-white/50 w-full h-full p-4" />
-                )}
-             </div>
-             <p className="text-white font-black text-center leading-tight">
-               {userProfile?.full_name?.split(' ')[0] || 'Visitante'}<br/>
-               <span className="text-white/50 text-[10px] uppercase tracking-widest">Editar Perfil</span>
-             </p>
+            <p className="text-slate-500 dark:text-slate-400 text-sm group-hover:text-indigo-500 transition-colors">
+              Toque para editar seu perfil
+            </p>
           </div>
         </div>
+
+        {userProfile?.financial_goal ? (
+          <div className="w-full md:w-auto bg-indigo-50 dark:bg-indigo-900/20 px-5 py-3 rounded-2xl border border-indigo-100 dark:border-indigo-900/50 flex items-center gap-3">
+             <div className="p-2 bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 rounded-xl">
+               <Target size={20} />
+             </div>
+             <div>
+               <p className="text-xs font-bold text-indigo-400 uppercase tracking-wide">Foco Principal</p>
+               <p className="text-sm font-bold text-indigo-900 dark:text-indigo-100">{userProfile.financial_goal}</p>
+             </div>
+          </div>
+        ) : (
+          <div className="hidden md:block">
+            <p className="text-xs text-slate-400 italic">Defina um objetivo no seu perfil.</p>
+          </div>
+        )}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {/* Saúde Financeira */}
-        <div className="bg-white dark:bg-slate-900 p-6 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-sm">
-           <div className="flex items-center justify-between mb-6">
-             <div className="p-3 bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 rounded-2xl">
-                <Activity size={24} />
-             </div>
-             <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Saúde Financeira</span>
-           </div>
-           <div className="space-y-4">
-              <div className="flex items-end justify-between">
-                <h3 className="text-2xl font-black text-slate-800 dark:text-white">{Math.round(healthScore)}%</h3>
-                <span className={`text-[10px] font-black px-2 py-1 rounded-full ${healthScore > 50 ? 'bg-emerald-500/10 text-emerald-500' : 'bg-rose-500/10 text-rose-500'}`}>
-                  {healthScore > 75 ? 'Excelente' : healthScore > 40 ? 'Estável' : 'Crítico'}
-                </span>
-              </div>
-              <div className="h-3 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-                <div 
-                  className={`h-full transition-all duration-1000 shadow-lg ${healthScore > 70 ? 'bg-indigo-500' : healthScore > 40 ? 'bg-emerald-500' : 'bg-rose-500'}`} 
-                  style={{ width: `${healthScore}%` }} 
-                />
-              </div>
-              <p className="text-xs text-slate-400 font-medium">Análise baseada na sua taxa de poupança atual.</p>
-           </div>
+      {/* Cards de Resumo Superior */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800">
+          <div className="flex items-center justify-between mb-4">
+            <div className="p-2 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-lg"><Wallet size={20} /></div>
+            <span className="text-xs font-medium text-slate-400 uppercase">Saldo Mensal</span>
+          </div>
+          <p className="text-2xl font-bold text-slate-800 dark:text-white">R$ {balance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+          <div className="mt-2 flex items-center gap-2">
+            <div className="flex-1 h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+              <div className={`h-full ${healthScore > 50 ? 'bg-emerald-500' : 'bg-amber-500'}`} style={{ width: `${healthScore}%` }} />
+            </div>
+            <span className="text-xs text-slate-400">{Math.round(healthScore)}%</span>
+          </div>
         </div>
 
-        {/* Foco Principal */}
-        <div className="bg-white dark:bg-slate-900 p-6 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-sm flex flex-col justify-between">
+        <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800">
           <div className="flex items-center justify-between mb-4">
-            <div className="p-3 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-2xl"><Target size={24} /></div>
-            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Meta de Vida</span>
+            <div className="p-2 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded-lg"><TrendingUp size={20} /></div>
+            <span className="text-xs font-medium text-slate-400 uppercase">Receitas</span>
           </div>
-          <div>
-            <p className="text-lg font-black text-slate-800 dark:text-white mb-1">
-              {userProfile?.financial_goal || 'Defina sua meta financeira'}
-            </p>
-            <p className="text-xs text-slate-400 font-medium leading-relaxed">
-              Mantenha o foco. Cada centavo economizado te aproxima deste objetivo.
-            </p>
-          </div>
-          <button onClick={() => setActiveTab('planning')} className="mt-4 text-[10px] font-black text-indigo-600 flex items-center gap-1 uppercase hover:translate-x-1 transition-transform">
-            Configurar Planejamento <ArrowRight size={14}/>
-          </button>
+          <p className="text-2xl font-bold text-slate-800 dark:text-white">R$ {income.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+          <p className="text-xs text-emerald-500 mt-1">Ganhos do mês</p>
         </div>
 
-        {/* Fluxo Semanal Simples */}
-        <div className="bg-white dark:bg-slate-900 p-6 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-sm">
+        <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Movimentação Semanal</h3>
-            <Zap className="text-indigo-500" size={18} />
+            <div className="p-2 bg-rose-50 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400 rounded-lg"><TrendingDown size={20} /></div>
+            <span className="text-xs font-medium text-slate-400 uppercase">Despesas</span>
           </div>
-          <div className="h-28">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={weeklyData}>
-                <Bar dataKey="receitas" fill="#10b981" radius={[4, 4, 0, 0]} barSize={12} />
-                <Bar dataKey="despesas" fill="#f43f5e" radius={[4, 4, 0, 0]} barSize={12} />
-              </BarChart>
-            </ResponsiveContainer>
+          <p className="text-2xl font-bold text-slate-800 dark:text-white">R$ {expenses.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+          <p className="text-xs text-rose-500 mt-1">{commitmentRatio.toFixed(1)}% comprometido</p>
+        </div>
+
+        <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 flex flex-col justify-between">
+          <div className="flex items-center justify-between mb-2">
+            <div className="p-2 bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 rounded-lg"><AlertCircle size={20} /></div>
+            <span className="text-xs font-medium text-slate-400 uppercase tracking-wider">Status</span>
           </div>
-          <div className="flex justify-between items-center mt-4">
-             <div className="flex items-center gap-1">
-                <div className="w-2 h-2 rounded-full bg-emerald-500" />
-                <span className="text-[9px] font-bold text-slate-400 uppercase">Recebido</span>
-             </div>
-             <div className="flex items-center gap-1">
-                <div className="w-2 h-2 rounded-full bg-rose-500" />
-                <span className="text-[9px] font-bold text-slate-400 uppercase">Pago</span>
-             </div>
-          </div>
+          <p className="text-sm font-semibold text-slate-600 dark:text-slate-300">
+            {healthScore > 70 ? '💰 Ótima Saúde' : healthScore > 40 ? '⚖️ Equilibrado' : '⚠️ Alerta de Gastos'}
+          </p>
+          <button onClick={() => setActiveTab('planning')} className="mt-4 text-xs font-bold text-indigo-600 dark:text-indigo-400 flex items-center gap-1">Ver Planejamento <ArrowRight size={12}/></button>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* PRÓXIMOS LANÇAMENTOS */}
-        <div className="lg:col-span-2 bg-white dark:bg-slate-900 p-6 sm:p-8 rounded-[3rem] shadow-sm border border-slate-100 dark:border-slate-800">
-          <div className="flex items-center justify-between mb-8">
-             <div className="flex items-center gap-3">
-               <div className="p-3 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-2xl">
-                 <CalendarClock size={24} />
-               </div>
-               <div>
-                 <h3 className="text-xl font-black text-slate-800 dark:text-white">Agenda Financeira</h3>
-                 <p className="text-xs text-slate-400 font-medium">Próximos compromissos registrados</p>
-               </div>
-             </div>
-          </div>
-
-          <div className="space-y-4">
-            {upcomingTransactions.length > 0 ? (
-              upcomingTransactions.map((t) => {
-                const category = categories.find(c => c.id === t.category_id);
-                const Icon = ICON_MAP[category?.icon || 'MoreHorizontal'] || MoreHorizontal;
-                const isIncome = t.type === 'INCOME';
-                
-                return (
-                  <div key={t.id} className="flex items-center justify-between p-5 bg-slate-50 dark:bg-slate-800/40 rounded-3xl border border-transparent hover:border-indigo-500/20 transition-all group">
-                    <div className="flex items-center gap-5">
-                      <div className="flex flex-col items-center justify-center min-w-[50px] py-2 px-1 bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700">
-                         <span className="text-[9px] font-black text-indigo-500 uppercase">{formatDateLabel(t.date)}</span>
-                      </div>
-                      <div className="w-12 h-12 rounded-2xl flex items-center justify-center text-white shrink-0 shadow-lg" style={{ backgroundColor: category?.color || '#94a3b8' }}>
-                         <Icon size={24} />
-                      </div>
-                      <div className="min-w-0">
-                        <p className="font-black text-slate-800 dark:text-white text-lg truncate leading-tight">{t.description}</p>
-                        <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mt-0.5">{category?.name || 'Geral'}</p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                       <p className={`font-black text-lg ${isIncome ? 'text-emerald-500' : 'text-rose-500'}`}>
-                         {isIncome ? '+' : '-'} R$ {t.amount.toLocaleString('pt-BR')}
-                       </p>
-                       <p className="text-[10px] text-slate-400 font-bold uppercase">{t.payment_method}</p>
-                    </div>
-                  </div>
-                );
-              })
-            ) : (
-              <div className="py-16 flex flex-col items-center justify-center text-center opacity-30">
-                 <Calendar className="mb-4 text-slate-300" size={64} />
-                 <p className="text-base font-black text-slate-500 uppercase">Tudo em ordem!</p>
-              </div>
-            )}
+        <div className="lg:col-span-2 bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800">
+          <h3 className="text-lg font-semibold text-slate-800 dark:text-white mb-6">Comparativo Semestral</h3>
+          <div className="h-64 w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={last6MonthsData}>
+                <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 12 }} />
+                <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 12 }} />
+                <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }} />
+                <Bar dataKey="receitas" fill="#10b981" radius={[4, 4, 0, 0]} barSize={15} />
+                <Bar dataKey="despesas" fill="#f43f5e" radius={[4, 4, 0, 0]} barSize={15} />
+              </BarChart>
+            </ResponsiveContainer>
           </div>
         </div>
 
-        {/* ÚLTIMAS ATIVIDADES */}
-        <div className="bg-white dark:bg-slate-900 p-6 sm:p-8 rounded-[3rem] border border-slate-100 dark:border-slate-800 shadow-sm">
-          <div className="flex items-center justify-between mb-8">
-            <h3 className="text-xl font-black text-slate-800 dark:text-white">Atividades Recentes</h3>
-            <button onClick={() => setActiveTab('expenses')} className="p-2 bg-slate-50 dark:bg-slate-800 text-indigo-500 rounded-xl">
-              <ArrowRightCircle size={20} />
-            </button>
+        <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800">
+          <h3 className="text-lg font-semibold text-slate-800 dark:text-white mb-6">Categorias</h3>
+          <div className="h-64 w-full flex flex-col items-center">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie data={categoryData} cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value">
+                  {categoryData.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.color} />)}
+                </Pie>
+                <Tooltip />
+              </PieChart>
+            </ResponsiveContainer>
           </div>
+        </div>
+      </div>
 
-          <div className="space-y-6">
-            {recentExpenses.length > 0 ? (
-              recentExpenses.map((t) => {
-                const category = categories.find(c => c.id === t.category_id);
-                return (
-                  <div key={t.id} className="flex items-center justify-between group">
-                    <div className="flex items-center gap-4">
-                       <div className="w-2 h-2 rounded-full" style={{ backgroundColor: category?.color }} />
-                       <div className="min-w-0">
-                          <p className="font-bold text-slate-800 dark:text-white truncate text-sm">{t.description}</p>
-                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">
-                            {new Date(t.date).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })} • {category?.name}
-                          </p>
-                       </div>
+      {/* SEÇÃO DETALHADA DE DESPESAS COM GRÁFICO */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Clock className="text-indigo-600" size={20} />
+            <h3 className="text-lg font-bold text-slate-800 dark:text-white">Análise Detalhada de Gastos</h3>
+          </div>
+          <button onClick={() => setActiveTab('expenses')} className="text-sm font-semibold text-indigo-600 dark:text-indigo-400">Ver Histórico Completo</button>
+        </div>
+
+        {/* Gráfico de Tendência Diária da Semana */}
+        <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
+          <div className="flex items-center justify-between mb-4 px-2">
+            <span className="text-xs font-bold text-slate-400 uppercase">Tendência de Gastos (Últimos 7 dias)</span>
+            <span className="text-xs font-bold text-rose-500">Total da semana: R$ {last7DaysData.reduce((a,b)=>a+b.total, 0).toLocaleString('pt-BR')}</span>
+          </div>
+          <div className="h-32 w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={last7DaysData}>
+                <defs>
+                  <linearGradient id="colorTotal" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#f43f5e" stopOpacity={0.1}/>
+                    <stop offset="95%" stopColor="#f43f5e" stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
+                <Tooltip 
+                   contentStyle={{ borderRadius: '12px', border: 'none', fontSize: '12px' }}
+                   formatter={(val: number) => [`R$ ${val.toLocaleString('pt-BR')}`, 'Gasto']}
+                />
+                <Area type="monotone" dataKey="total" stroke="#f43f5e" strokeWidth={3} fillOpacity={1} fill="url(#colorTotal)" />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* Lista de Despesas Detalhadas (Cards) */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {recentExpenses.length > 0 ? (
+            recentExpenses.map((t) => {
+              const category = categories.find(c => c.id === t.category_id);
+              return (
+                <div key={t.id} className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm hover:shadow-md transition-shadow group relative overflow-hidden">
+                  <div className="absolute top-0 right-0 w-16 h-16 opacity-5 group-hover:opacity-10 transition-opacity">
+                    <Tag size={64} className="rotate-12 translate-x-4 -translate-y-4" />
+                  </div>
+                  
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 rounded-xl flex items-center justify-center text-white shadow-lg" style={{ backgroundColor: category?.color || '#94a3b8' }}>
+                        <ArrowDownLeft size={22} />
+                      </div>
+                      <div>
+                        <h4 className="font-bold text-slate-800 dark:text-white line-clamp-1">{t.description}</h4>
+                        <span className="text-xs text-slate-400 font-medium">{category?.name || 'Outros'}</span>
+                      </div>
                     </div>
-                    <span className="font-black text-rose-500 text-sm">
-                      - R$ {t.amount.toLocaleString('pt-BR')}
+                    <span className={`text-xs px-2 py-1 rounded-lg font-bold ${t.expense_type === 'FIXED' ? 'bg-indigo-50 text-indigo-600 dark:bg-indigo-900/30' : 'bg-amber-50 text-amber-600 dark:bg-amber-900/30'}`}>
+                      {t.expense_type === 'FIXED' ? 'Fixo' : 'Variável'}
                     </span>
                   </div>
-                );
-              })
-            ) : (
-              <p className="text-center py-10 text-slate-400 text-sm font-bold uppercase">Nenhum registro anterior.</p>
-            )}
-          </div>
-          
-          <div className="mt-12 pt-8 border-t border-slate-50 dark:border-slate-800 flex flex-col items-center justify-center gap-4">
-             <div className="w-12 h-12 bg-slate-50 dark:bg-slate-800 rounded-2xl flex items-center justify-center text-indigo-500 border border-slate-100 dark:border-slate-800">
-               <ShieldCheck size={24} />
-             </div>
-             <div className="text-center">
-               <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Tecnologia & Design</p>
-               <p className="text-sm font-black text-slate-800 dark:text-white">Gustavo Henrique de Oliveira</p>
-             </div>
-          </div>
+
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between text-xs text-slate-500">
+                      <div className="flex items-center gap-1.5"><Calendar size={14}/> {new Date(t.date).toLocaleDateString('pt-BR')}</div>
+                      <div className="flex items-center gap-1.5"><CreditCard size={14}/> {t.payment_method}</div>
+                    </div>
+                    
+                    <div className="pt-3 border-t border-slate-50 dark:border-slate-800 flex items-center justify-between">
+                      <span className="text-xs font-bold text-slate-400 uppercase">Valor</span>
+                      <span className="text-lg font-black text-rose-600">R$ {t.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })
+          ) : (
+            <div className="col-span-full py-12 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-dashed border-slate-200 dark:border-slate-700 text-center">
+              <p className="text-slate-400 font-medium">Nenhuma despesa recente para exibir.</p>
+            </div>
+          )}
         </div>
       </div>
     </div>

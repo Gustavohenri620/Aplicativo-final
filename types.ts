@@ -2,14 +2,12 @@
 export type TransactionType = 'INCOME' | 'EXPENSE';
 export type ExpenseType = 'FIXED' | 'VARIABLE';
 export type IncomeType = 'SALARY' | 'EXTRA';
-export type TransactionStatus = 'PENDING' | 'COMPLETED';
 
 export interface Category {
   id: string;
   name: string;
   icon: string;
   color: string;
-  user_id?: string | null;
 }
 
 export interface Transaction {
@@ -24,7 +22,6 @@ export interface Transaction {
   payment_method?: string;
   recurring: boolean;
   user_id: string;
-  status: TransactionStatus;
 }
 
 export interface Budget {
@@ -42,16 +39,4 @@ export interface UserProfile {
   full_name?: string;
   avatar_url?: string;
   financial_goal?: string;
-  whatsapp_number?: string;
-  xp?: number;
-}
-
-export interface RoutineItem {
-  id: string;
-  title: string;
-  completed: boolean;
-  type: 'TASK' | 'WORKOUT';
-  category?: string;
-  user_id: string;
-  created_at: string;
 }
