@@ -13,7 +13,8 @@ import {
   Tags,
   Target,
   LogOut,
-  CalendarDays
+  CalendarDays,
+  Phone
 } from 'lucide-react';
 import { UserProfile } from '../types';
 
@@ -23,7 +24,7 @@ interface LayoutProps {
   setActiveTab: (tab: string) => void;
   onAddClick: () => void;
   userProfile: UserProfile;
-  onUpdateProfile: (name: string, photo: string, goal: string) => void;
+  onUpdateProfile: (name: string, photo: string, goal: string, whatsapp: string) => void;
   onLogout: () => void;
 }
 
@@ -41,6 +42,7 @@ const Layout: React.FC<LayoutProps> = ({
   const [tempName, setTempName] = useState('');
   const [tempPhoto, setTempPhoto] = useState('');
   const [tempGoal, setTempGoal] = useState('');
+  const [tempWhatsapp, setTempWhatsapp] = useState('');
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   
@@ -60,12 +62,13 @@ const Layout: React.FC<LayoutProps> = ({
     setTempName(rawName);
     setTempPhoto(userProfile.avatar_url || '');
     setTempGoal(userProfile.financial_goal || '');
+    setTempWhatsapp(userProfile.whatsapp_number || '');
     setIsProfileModalOpen(true);
   };
 
   const handleSaveProfile = (e: React.FormEvent) => {
     e.preventDefault();
-    onUpdateProfile(tempName, tempPhoto, tempGoal);
+    onUpdateProfile(tempName, tempPhoto, tempGoal, tempWhatsapp);
     setIsProfileModalOpen(false);
   };
 
@@ -283,6 +286,20 @@ const Layout: React.FC<LayoutProps> = ({
                     onChange={(e) => setTempGoal(e.target.value)}
                     className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border-none rounded-xl focus:ring-2 focus:ring-indigo-500 text-slate-800 dark:text-white outline-none placeholder:text-slate-400 font-medium"
                     placeholder="Ex: Viagem para Europa, Comprar Carro..."
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-bold text-slate-700 dark:text-slate-300 flex items-center gap-2">
+                    <Phone size={14} className="text-emerald-500" />
+                    WhatsApp (DDI + DDD + Número)
+                  </label>
+                  <input
+                    type="tel"
+                    value={tempWhatsapp}
+                    onChange={(e) => setTempWhatsapp(e.target.value)}
+                    className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border-none rounded-xl focus:ring-2 focus:ring-indigo-500 text-slate-800 dark:text-white outline-none placeholder:text-slate-400 font-medium"
+                    placeholder="5511999999999"
                   />
                 </div>
               </div>
