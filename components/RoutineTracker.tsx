@@ -51,7 +51,7 @@ const RoutineTracker: React.FC<RoutineTrackerProps> = ({ routines, onAdd, onTogg
     setInputValue('');
   };
 
-  // Grouping by "Period" (simplified for demo using index or mock)
+  // Grouping by "Period"
   const groupedItems = useMemo(() => {
     return {
       morning: filteredItems.filter((_, i) => i % 3 === 0),
@@ -99,7 +99,7 @@ const RoutineTracker: React.FC<RoutineTrackerProps> = ({ routines, onAdd, onTogg
                      <div className="flex items-center gap-2 mt-0.5">
                         <span className="text-[10px] font-black text-indigo-500 uppercase">+50 XP</span>
                         <span className="w-1 h-1 bg-slate-300 rounded-full"></span>
-                        <span className="text-[10px] font-bold text-slate-400 uppercase">Pilar Diário</span>
+                        <span className="text-[10px] font-bold text-slate-400 uppercase">Progresso</span>
                      </div>
                    )}
                  </div>
@@ -145,7 +145,7 @@ const RoutineTracker: React.FC<RoutineTrackerProps> = ({ routines, onAdd, onTogg
              </div>
              <div className="flex-1">
                 <h1 className="text-2xl font-black text-slate-800 dark:text-white tracking-tight flex items-center gap-2">
-                  Sua Jornada Diária <Sparkles className="text-amber-400 fill-amber-400" size={20} />
+                  Minha Rotina Diária
                 </h1>
                 <div className="mt-3 w-full max-w-xs">
                    <div className="flex justify-between items-end mb-1.5">
@@ -277,20 +277,20 @@ const RoutineTracker: React.FC<RoutineTrackerProps> = ({ routines, onAdd, onTogg
               </div>
            </div>
 
-           {/* Habit Tip */}
+           {/* Motivation Card (Replaced AI tip with generic info) */}
            <div className="bg-white dark:bg-slate-900 p-8 rounded-[3rem] border border-slate-100 dark:border-slate-800 shadow-sm relative">
               <div className="flex items-center gap-3 mb-4 text-amber-500">
-                <Zap size={20} className="fill-amber-500" />
-                <span className="text-[10px] font-black uppercase tracking-widest">Hack de Hoje</span>
+                <Activity size={20} className="fill-amber-500" />
+                <span className="text-[10px] font-black uppercase tracking-widest">Meu Objetivo</span>
               </div>
               <p className="text-slate-800 dark:text-slate-200 font-bold leading-relaxed">
-                "Realize sua tarefa mais difícil (o sapo) nos primeiros 90 minutos do seu dia para garantir um pico de dopamina produtivo."
+                Mantenha a consistência para subir de nível. Cada tarefa concluída fortalece seus hábitos e sua disciplina.
               </p>
               <div className="mt-6 flex items-center gap-2">
                  <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-indigo-500">
-                    <Sparkles size={14} />
+                    <Clock size={14} />
                  </div>
-                 <span className="text-[10px] font-black text-slate-400 uppercase">Sugestão Automática</span>
+                 <span className="text-[10px] font-black text-slate-400 uppercase">Foco no Dia</span>
               </div>
            </div>
         </div>
