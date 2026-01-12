@@ -55,6 +55,7 @@ const App: React.FC = () => {
     }, 3000);
   }, []);
 
+  // Monitoramento de Auth e Configuração de Realtime
   useEffect(() => {
     document.documentElement.classList.add('dark');
     
@@ -84,7 +85,8 @@ const App: React.FC = () => {
   const setupRealtimeSubscriptions = (userId: string) => {
     if (syncChannelRef.current) supabase.removeChannel(syncChannelRef.current);
 
-    syncChannelRef.current = supabase.channel('db-sync')
+    // Canal unificado para ouvir mudanças em todas as tabelas relevantes
+    syncChannelRef.current = supabase.channel('db-changes')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles', filter: `id=eq.${userId}` }, (payload) => {
         if (payload.new) setUserProfile(prev => ({ ...prev, ...payload.new }));
         updateSyncStamp();
@@ -121,15 +123,7 @@ const App: React.FC = () => {
       if (profileData) {
         currentProfile = profileData;
       } else {
-        currentProfile = { 
-          id: userId, 
-          email: email, 
-          full_name: email.split('@')[0], 
-          xp: 0, 
-          avatar_url: '', 
-          financial_goal: '', 
-          whatsapp_number: '' 
-        };
+        currentProfile = { id: userId, email: email, full_name: email.split('@')[0], xp: 0, avatar_url: '', financial_goal: '', whatsapp_number: '' };
         await supabase.from('profiles').upsert(currentProfile);
       }
       setUserProfile(currentProfile);
@@ -148,8 +142,7 @@ const App: React.FC = () => {
 
       updateSyncStamp();
     } catch (error) {
-      console.error("Erro ao sincronizar dados:", error);
-      showToast('Falha na sincronização cloud.', 'error');
+      showToast('Falha na sincronização inicial.', 'error');
     } finally {
       setLoading(false);
     }
@@ -158,34 +151,15 @@ const App: React.FC = () => {
   const handleUpdateProfile = async (name: string, photo: string, goal: string, whatsapp: string) => {
     if (!user) return;
     setIsSyncing(true);
-    
-    // Buscar o XP mais atual antes de salvar para evitar sobrescrever com valor antigo
     const xp = userProfile?.xp || 0;
-    
-    const profileToSave = { 
-      id: user.id, 
-      email: user.email, 
-      full_name: name, 
-      avatar_url: photo, 
-      financial_goal: goal, 
-      whatsapp_number: whatsapp, 
-      xp: xp 
-    };
-
+    const profileToSave = { id: user.id, email: user.email, full_name: name, avatar_url: photo, financial_goal: goal, whatsapp_number: whatsapp, xp: xp };
     try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .upsert(profileToSave, { onConflict: 'id' })
-        .select()
-        .single();
-
+      const { data, error } = await supabase.from('profiles').upsert(profileToSave, { onConflict: 'id' }).select().single();
       if (error) throw error;
       setUserProfile(data);
-      updateSyncStamp();
-      showToast('Perfil atualizado em tempo real!');
-    } catch (error: any) {
-      console.error('Erro de perfil:', error);
-      showToast('Erro ao salvar: Verifique o tamanho da foto.', 'error');
+      showToast('Perfil sincronizado!');
+    } catch (error) {
+      showToast('Erro ao sincronizar perfil.', 'error');
     } finally {
       setIsSyncing(false);
     }
@@ -199,10 +173,9 @@ const App: React.FC = () => {
       const { error } = await supabase.from('routines').insert(newItem);
       if (error) throw error;
       setRoutines(prev => [newItem as RoutineItem, ...prev]);
-      updateSyncStamp();
-      showToast('Meta guardada!');
+      showToast('Rotina salva na nuvem!');
     } catch (error) {
-      showToast('Erro ao salvar meta.', 'error');
+      showToast('Falha ao salvar rotina.', 'error');
     } finally {
       setIsSyncing(false);
     }
@@ -224,10 +197,9 @@ const App: React.FC = () => {
       ]);
       setRoutines(prev => prev.map(r => r.id === id ? { ...r, completed } : r));
       setUserProfile(prev => prev ? { ...prev, xp: newXP } : null);
-      updateSyncStamp();
-      showToast(completed ? 'Meta Concluída! +XP' : 'Status Resetado');
+      showToast('Progresso atualizado em tempo real!');
     } catch (error) {
-      showToast('Erro na atualização.', 'error');
+      showToast('Erro na atualização de status.', 'error');
     } finally {
       setIsSyncing(false);
     }
@@ -239,10 +211,9 @@ const App: React.FC = () => {
     try {
       await supabase.from('routines').delete().eq('id', id).eq('user_id', user.id);
       setRoutines(prev => prev.filter(r => r.id !== id));
-      updateSyncStamp();
-      showToast('Rotina deletada.', 'delete');
+      showToast('Rotina removida.', 'delete');
     } catch (error) {
-      showToast('Erro ao excluir.', 'error');
+      showToast('Erro ao excluir do servidor.', 'error');
     } finally {
       setIsSyncing(false);
     }
@@ -257,10 +228,9 @@ const App: React.FC = () => {
       if (error) throw error;
       setTransactions(prev => [newT as Transaction, ...prev]);
       setIsFormOpen(false);
-      updateSyncStamp();
-      showToast('Lançamento cloud salvo!');
+      showToast('Registro financeiro salvo!');
     } catch (error) {
-      showToast('Erro ao gravar lançamento.', 'error');
+      showToast('Falha ao registrar transação.', 'error');
     } finally {
       setIsSyncing(false);
     }
@@ -276,10 +246,9 @@ const App: React.FC = () => {
       setTransactions(prev => prev.map(t => t.id === editingTransaction.id ? updated as Transaction : t));
       setEditingTransaction(undefined);
       setIsFormOpen(false);
-      updateSyncStamp();
-      showToast('Atualizado!');
+      showToast('Registro atualizado!');
     } catch (error) {
-      showToast('Erro ao atualizar.', 'error');
+      showToast('Erro ao sincronizar atualização.', 'error');
     } finally {
       setIsSyncing(false);
     }
@@ -292,10 +261,9 @@ const App: React.FC = () => {
     try {
       await supabase.from('transactions').update({ status: newStatus }).eq('id', id).eq('user_id', user.id);
       setTransactions(prev => prev.map(t => t.id === id ? { ...t, status: newStatus } : t));
-      updateSyncStamp();
-      showToast('Status Financeiro Alterado');
+      showToast('Status financeiro alterado!');
     } catch (error) {
-      showToast('Erro na alteração.', 'error');
+      showToast('Erro na alteração de status.', 'error');
     } finally {
       setIsSyncing(false);
     }
@@ -303,15 +271,14 @@ const App: React.FC = () => {
 
   const handleDeleteTransaction = async (id: string) => {
     if (!user) return;
-    if (window.confirm('Excluir permanentemente da nuvem?')) {
+    if (window.confirm('Excluir este registro permanentemente da nuvem?')) {
       setIsSyncing(true);
       try {
         await supabase.from('transactions').delete().eq('id', id).eq('user_id', user.id);
         setTransactions(prev => prev.filter(t => t.id !== id));
-        updateSyncStamp();
         showToast('Removido com sucesso!', 'delete');
       } catch (error) {
-        showToast('Erro ao excluir.', 'error');
+        showToast('Erro ao excluir registro.', 'error');
       } finally {
         setIsSyncing(false);
       }
@@ -326,8 +293,7 @@ const App: React.FC = () => {
     try {
       await supabase.from('categories').upsert(newCat, { onConflict: 'id' });
       setCategories(prev => catData.id ? prev.map(c => c.id === id ? newCat : c) : [...prev, newCat]);
-      updateSyncStamp();
-      showToast('Categoria cloud salva!');
+      showToast('Categoria sincronizada!');
     } catch (error) {
       showToast('Erro ao salvar categoria.', 'error');
     } finally {
@@ -341,10 +307,9 @@ const App: React.FC = () => {
     try {
       await supabase.from('categories').delete().eq('id', id).eq('user_id', user.id);
       setCategories(prev => prev.filter(c => c.id !== id));
-      updateSyncStamp();
-      showToast('Categoria deletada.', 'delete');
+      showToast('Categoria excluída.', 'delete');
     } catch (error) {
-      showToast('Erro ao remover.', 'error');
+      showToast('Erro ao remover categoria.', 'error');
     } finally {
       setIsSyncing(false);
     }
@@ -359,8 +324,7 @@ const App: React.FC = () => {
     try {
       await supabase.from('budgets').upsert(newB, { onConflict: 'id' });
       setBudgets(prev => [...prev.filter(b => b.id !== id), newB as Budget]);
-      updateSyncStamp();
-      showToast('Planejamento sincronizado!');
+      showToast('Meta financeira atualizada!');
     } catch (error) {
       showToast('Erro ao salvar planejamento.', 'error');
     } finally {
@@ -369,7 +333,7 @@ const App: React.FC = () => {
   };
 
   const handleLogout = async () => {
-    if (window.confirm('Encerrar sessão na nuvem?')) {
+    if (window.confirm('Deseja realmente sair da sua conta?')) {
       await supabase.auth.signOut();
       showToast('Sessão encerrada.', 'info');
     }
@@ -383,7 +347,7 @@ const App: React.FC = () => {
       </div>
       <div className="text-center">
         <span className="text-xs font-black uppercase tracking-[0.4em] block mb-2 text-indigo-400">Security Check</span>
-        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest animate-pulse">Estabelecendo Handshake Cloud...</span>
+        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest animate-pulse">Sincronizando via Supabase Cloud...</span>
       </div>
     </div>
   );
@@ -418,7 +382,7 @@ const App: React.FC = () => {
       
       <div className="fixed top-20 right-4 left-4 sm:left-auto sm:right-6 sm:w-80 z-[100] flex flex-col gap-3 pointer-events-none">
         {toasts.map(t => (
-          <div key={t.id} className={`pointer-events-auto flex items-center gap-3 p-4 rounded-3xl shadow-2xl border backdrop-blur-xl animate-in slide-in-from-right-8 duration-500 ${t.type === 'success' ? 'bg-emerald-500/90 border-emerald-400 text-white' : t.type === 'error' ? 'bg-rose-500/90 border-rose-400 text-white' : t.type === 'delete' ? 'bg-slate-800/90 border-slate-700 text-white' : 'bg-indigo-500/90 border-indigo-400 text-white'}`}>
+          <div key={t.id} className={`pointer-events-auto flex items-center gap-3 p-4 rounded-3xl shadow-2xl border backdrop-blur-xl animate-in slide-in-from-right-8 duration-300 ${t.type === 'success' ? 'bg-emerald-500/90 border-emerald-400 text-white' : t.type === 'error' ? 'bg-rose-500/90 border-rose-400 text-white' : t.type === 'delete' ? 'bg-slate-800/90 border-slate-700 text-white' : 'bg-indigo-500/90 border-indigo-400 text-white'}`}>
             <div className="shrink-0">
               {t.type === 'success' && <CheckCircle2 size={20} />}
               {t.type === 'error' && <AlertCircle size={20} />}

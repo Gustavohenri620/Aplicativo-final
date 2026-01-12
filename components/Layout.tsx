@@ -130,7 +130,7 @@ const Layout: React.FC<LayoutProps> = ({
           ctx.imageSmoothingQuality = 'high';
           ctx.drawImage(img, 0, 0, width, height);
           
-          // Qualidade 0.3 garante um Base64 minúsculo que nunca dará erro 413
+          // Qualidade 0.3 garante um Base64 minúsculo que nunca dará erro 413 do Supabase
           const dataUrl = canvas.toDataURL('image/jpeg', 0.3); 
           setTempPhoto(dataUrl);
         }
@@ -231,7 +231,7 @@ const Layout: React.FC<LayoutProps> = ({
                 <div className="flex flex-col -space-y-0.5">
                   <span className="text-[9px] font-black text-emerald-500 uppercase tracking-widest leading-none">Status Ativo</span>
                   {lastSyncTime && (
-                    <span className="text-[7px] font-bold text-slate-600 lowercase leading-none">last heartbeat: {lastSyncTime}</span>
+                    <span className="text-[7px] font-bold text-slate-600 lowercase leading-none">heartbeat: {lastSyncTime}</span>
                   )}
                 </div>
               </div>
