@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Target, TrendingUp, AlertTriangle, Plus, Edit2, Check, X } from 'lucide-react';
+import { Target, TrendingUp, AlertTriangle, AlertCircle, Plus, Edit2, Check, X } from 'lucide-react';
 import { Category, Budget, Transaction } from '../types';
 
 interface PlanningProps {
@@ -55,9 +55,19 @@ const Planning: React.FC<PlanningProps> = ({ categories, budgets, transactions, 
           const budgetAmount = budget?.amount || 0;
           const percent = budgetAmount > 0 ? (spent / budgetAmount) * 100 : 0;
           const isOverBudget = budgetAmount > 0 && spent > budgetAmount;
+          const isApproachingLimit = budgetAmount > 0 && percent >= 80 && !isOverBudget;
 
           return (
-            <div key={cat.id} className={`bg-white dark:bg-slate-900 p-6 rounded-3xl border shadow-sm transition-all duration-300 ${isOverBudget ? 'border-rose-200 dark:border-rose-900/50 bg-rose-50/10' : 'border-slate-100 dark:border-slate-800'}`}>
+            <div 
+              key={cat.id} 
+              className={`bg-white dark:bg-slate-900 p-6 rounded-3xl border shadow-sm transition-all duration-300 ${
+                isOverBudget 
+                  ? 'border-rose-200 dark:border-rose-900/50 bg-rose-50/10' 
+                  : isApproachingLimit
+                  ? 'border-amber-200 dark:border-amber-900/50 bg-amber-50/10'
+                  : 'border-slate-100 dark:border-slate-800'
+              }`}
+            >
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-sm" style={{ backgroundColor: cat.color }}>
@@ -104,8 +114,8 @@ const Planning: React.FC<PlanningProps> = ({ categories, budgets, transactions, 
 
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between text-xs font-medium">
-                    <span className={isOverBudget ? 'text-rose-500' : 'text-slate-500'}>Progresso</span>
-                    <span className={isOverBudget ? 'text-rose-500' : 'text-slate-500'}>{Math.round(percent)}%</span>
+                    <span className={isOverBudget ? 'text-rose-500' : isApproachingLimit ? 'text-amber-600' : 'text-slate-500'}>Progresso</span>
+                    <span className={isOverBudget ? 'text-rose-500' : isApproachingLimit ? 'text-amber-600' : 'text-slate-500'}>{Math.round(percent)}%</span>
                   </div>
                   <div className="h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
                     <div 
@@ -116,9 +126,16 @@ const Planning: React.FC<PlanningProps> = ({ categories, budgets, transactions, 
                 </div>
 
                 {isOverBudget && (
-                  <div className="flex items-center gap-2 p-2 bg-rose-50 dark:bg-rose-900/20 border border-rose-100 dark:border-rose-900/50 rounded-xl text-rose-600 dark:text-rose-400 text-xs">
-                    <AlertTriangle size={14} />
+                  <div className="flex items-center gap-2 p-2 bg-rose-50 dark:bg-rose-900/20 border border-rose-100 dark:border-rose-900/50 rounded-xl text-rose-600 dark:text-rose-400 text-xs animate-in slide-in-from-top-1 duration-300">
+                    <AlertTriangle size={14} className="shrink-0" />
                     <span>Limite excedido em R$ {(spent - budgetAmount).toLocaleString('pt-BR')}</span>
+                  </div>
+                )}
+
+                {isApproachingLimit && (
+                  <div className="flex items-center gap-2 p-2 bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-900/50 rounded-xl text-amber-700 dark:text-amber-400 text-xs animate-in slide-in-from-top-1 duration-300">
+                    <AlertCircle size={14} className="shrink-0" />
+                    <span>Atenção: Você já usou {Math.round(percent)}% do limite.</span>
                   </div>
                 )}
               </div>

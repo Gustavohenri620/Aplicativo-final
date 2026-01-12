@@ -2,14 +2,13 @@
 import React from 'react';
 import { 
   PieChart, Pie, Cell, ResponsiveContainer, 
-  BarChart, Bar, XAxis, YAxis, Tooltip, 
-  AreaChart, Area 
+  BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid
 } from 'recharts';
 import { 
   Wallet, TrendingUp, TrendingDown, 
   AlertCircle, ArrowRight, Clock, 
-  ArrowDownLeft, Calendar, CreditCard, Tag,
-  Target, User, Edit2
+  Calendar, CreditCard, Tag,
+  Target, User, Edit2, Activity
 } from 'lucide-react';
 import { Transaction, Category, UserProfile } from '../types';
 
@@ -43,33 +42,26 @@ const Dashboard: React.FC<DashboardProps> = ({ transactions, categories, setActi
   const commitmentRatio = income > 0 ? (expenses / income) * 100 : (expenses > 0 ? 100 : 0);
   const healthScore = Math.max(0, Math.min(100, (1 - expenses / (income || 1)) * 100));
 
-  // Category Distribution
-  const categoryData = categories.map(cat => {
-    const total = currentMonthTransactions
-      .filter(t => t.category_id === cat.id && t.type === 'EXPENSE')
-      .reduce((acc, t) => acc + t.amount, 0);
-    return { name: cat.name, value: total, color: cat.color };
-  }).filter(c => c.value > 0);
-
-  // Daily Spending Trend (Last 7 days)
-  const last7DaysData = Array.from({ length: 7 }).map((_, i) => {
-    const date = new Date();
-    date.setDate(date.getDate() - (6 - i));
-    const dateStr = date.toISOString().split('T')[0];
-    const dayTotal = transactions
-      .filter(t => t.type === 'EXPENSE' && t.date === dateStr)
-      .reduce((acc, t) => acc + t.amount, 0);
+  // Weekly Flow Data (Last 7 days)
+  const weeklyData = Array.from({ length: 7 }).map((_, i) => {
+    const d = new Date();
+    d.setDate(d.getDate() - (6 - i));
+    const dateStr = d.toISOString().split('T')[0];
+    
+    const dayTransactions = transactions.filter(t => t.date === dateStr);
+    
     return {
-      name: date.toLocaleDateString('pt-BR', { weekday: 'short' }),
-      total: dayTotal,
+      name: d.toLocaleDateString('pt-BR', { weekday: 'short' }).replace('.', ''),
+      receitas: dayTransactions.filter(t => t.type === 'INCOME').reduce((acc, t) => acc + t.amount, 0),
+      despesas: dayTransactions.filter(t => t.type === 'EXPENSE').reduce((acc, t) => acc + t.amount, 0),
     };
   });
 
-  // Detailed Recent Expenses (last 6)
+  // Detailed Recent Expenses (last 8 for the table)
   const recentExpenses = transactions
     .filter(t => t.type === 'EXPENSE')
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-    .slice(0, 6);
+    .slice(0, 8);
 
   const last6MonthsData = Array.from({ length: 6 }).map((_, i) => {
     const date = new Date();
@@ -186,9 +178,14 @@ const Dashboard: React.FC<DashboardProps> = ({ transactions, categories, setActi
           <div className="h-64 w-full">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={last6MonthsData}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#1e293b" opacity={0.1} />
                 <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 12 }} />
                 <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 12 }} />
-                <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }} />
+                <Tooltip 
+                  cursor={{ fill: '#f1f5f9', opacity: 0.1 }}
+                  contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', backgroundColor: '#0f172a' }} 
+                  itemStyle={{ fontSize: '12px', fontWeight: 'bold' }}
+                />
                 <Bar dataKey="receitas" fill="#10b981" radius={[4, 4, 0, 0]} barSize={15} />
                 <Bar dataKey="despesas" fill="#f43f5e" radius={[4, 4, 0, 0]} barSize={15} />
               </BarChart>
@@ -196,101 +193,115 @@ const Dashboard: React.FC<DashboardProps> = ({ transactions, categories, setActi
           </div>
         </div>
 
+        {/* GRÁFICO DE GASTOS SEMANAIS (SUBSTITUIU CATEGORIAS) */}
         <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800">
-          <h3 className="text-lg font-semibold text-slate-800 dark:text-white mb-6">Categorias</h3>
-          <div className="h-64 w-full flex flex-col items-center">
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-lg font-semibold text-slate-800 dark:text-white">Gastos Semanais</h3>
+            <Activity className="text-indigo-500" size={18} />
+          </div>
+          <div className="h-64 w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie data={categoryData} cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value">
-                  {categoryData.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.color} />)}
-                </Pie>
-                <Tooltip />
-              </PieChart>
+              <BarChart data={weeklyData}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#1e293b" opacity={0.1} />
+                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 11, fontWeight: 600 }} />
+                <Tooltip 
+                  cursor={{ fill: 'transparent' }}
+                  contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', backgroundColor: '#0f172a' }}
+                  itemStyle={{ fontSize: '12px', fontWeight: 'bold' }}
+                />
+                <Bar dataKey="receitas" fill="#10b981" radius={[3, 3, 0, 0]} barSize={8} />
+                <Bar dataKey="despesas" fill="#f43f5e" radius={[3, 3, 0, 0]} barSize={8} />
+              </BarChart>
             </ResponsiveContainer>
+          </div>
+          <div className="mt-4 flex items-center justify-center gap-4 text-[10px] font-bold uppercase tracking-wider">
+             <div className="flex items-center gap-1.5 text-emerald-500">
+               <div className="w-2 h-2 rounded-full bg-emerald-500" /> Entradas
+             </div>
+             <div className="flex items-center gap-1.5 text-rose-500">
+               <div className="w-2 h-2 rounded-full bg-rose-500" /> Saídas
+             </div>
           </div>
         </div>
       </div>
 
-      {/* SEÇÃO DETALHADA DE DESPESAS COM GRÁFICO */}
+      {/* TABELA DE DESPESAS RECENTES ORGANIZADA */}
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Clock className="text-indigo-600" size={20} />
-            <h3 className="text-lg font-bold text-slate-800 dark:text-white">Análise Detalhada de Gastos</h3>
+            <h3 className="text-lg font-bold text-slate-800 dark:text-white">Últimas Despesas</h3>
           </div>
-          <button onClick={() => setActiveTab('expenses')} className="text-sm font-semibold text-indigo-600 dark:text-indigo-400">Ver Histórico Completo</button>
+          <button onClick={() => setActiveTab('expenses')} className="text-sm font-semibold text-indigo-600 dark:text-indigo-400 hover:underline">Ver Histórico Completo</button>
         </div>
 
-        {/* Gráfico de Tendência Diária da Semana */}
-        <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
-          <div className="flex items-center justify-between mb-4 px-2">
-            <span className="text-xs font-bold text-slate-400 uppercase">Tendência de Gastos (Últimos 7 dias)</span>
-            <span className="text-xs font-bold text-rose-500">Total da semana: R$ {last7DaysData.reduce((a,b)=>a+b.total, 0).toLocaleString('pt-BR')}</span>
-          </div>
-          <div className="h-32 w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={last7DaysData}>
-                <defs>
-                  <linearGradient id="colorTotal" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#f43f5e" stopOpacity={0.1}/>
-                    <stop offset="95%" stopColor="#f43f5e" stopOpacity={0}/>
-                  </linearGradient>
-                </defs>
-                <Tooltip 
-                   contentStyle={{ borderRadius: '12px', border: 'none', fontSize: '12px' }}
-                   formatter={(val: number) => [`R$ ${val.toLocaleString('pt-BR')}`, 'Gasto']}
-                />
-                <Area type="monotone" dataKey="total" stroke="#f43f5e" strokeWidth={3} fillOpacity={1} fill="url(#colorTotal)" />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        {/* Lista de Despesas Detalhadas (Cards) */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {recentExpenses.length > 0 ? (
-            recentExpenses.map((t) => {
-              const category = categories.find(c => c.id === t.category_id);
-              return (
-                <div key={t.id} className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm hover:shadow-md transition-shadow group relative overflow-hidden">
-                  <div className="absolute top-0 right-0 w-16 h-16 opacity-5 group-hover:opacity-10 transition-opacity">
-                    <Tag size={64} className="rotate-12 translate-x-4 -translate-y-4" />
-                  </div>
-                  
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 rounded-xl flex items-center justify-center text-white shadow-lg" style={{ backgroundColor: category?.color || '#94a3b8' }}>
-                        <ArrowDownLeft size={22} />
+        <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-sm overflow-hidden">
+          <div className="overflow-x-auto no-scrollbar">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-slate-50 dark:bg-slate-800/50">
+                  <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest">Data</th>
+                  <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest">Descrição</th>
+                  <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest">Categoria</th>
+                  <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest hidden md:table-cell">Pagamento</th>
+                  <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest text-right">Valor</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-50 dark:divide-slate-800">
+                {recentExpenses.length > 0 ? (
+                  recentExpenses.map((t) => {
+                    const category = categories.find(c => c.id === t.category_id);
+                    return (
+                      <tr key={t.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors group">
+                        <td className="px-6 py-4">
+                          <div className="flex flex-col">
+                            <span className="text-sm font-bold text-slate-700 dark:text-slate-300">
+                              {new Date(t.date).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}
+                            </span>
+                            <span className="text-[10px] text-slate-400 font-medium">{new Date(t.date).getFullYear()}</span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex flex-col">
+                            <span className="text-sm font-bold text-slate-800 dark:text-white line-clamp-1">{t.description}</span>
+                            <span className="text-[10px] text-slate-400 font-medium md:hidden">{t.payment_method}</span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: category?.color || '#94a3b8' }} />
+                            <span className="text-sm font-medium text-slate-600 dark:text-slate-400">
+                              {category?.name || 'Outros'}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 hidden md:table-cell">
+                          <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400">
+                            <CreditCard size={14} />
+                            <span className="text-xs font-medium">{t.payment_method}</span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 text-right">
+                          <span className="text-base font-black text-rose-600 dark:text-rose-400">
+                            R$ {t.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })
+                ) : (
+                  <tr>
+                    <td colSpan={5} className="px-6 py-12 text-center">
+                      <div className="flex flex-col items-center gap-2 text-slate-400">
+                        <Calendar size={32} strokeWidth={1.5} />
+                        <p className="font-medium">Nenhuma despesa recente registrada.</p>
                       </div>
-                      <div>
-                        <h4 className="font-bold text-slate-800 dark:text-white line-clamp-1">{t.description}</h4>
-                        <span className="text-xs text-slate-400 font-medium">{category?.name || 'Outros'}</span>
-                      </div>
-                    </div>
-                    <span className={`text-xs px-2 py-1 rounded-lg font-bold ${t.expense_type === 'FIXED' ? 'bg-indigo-50 text-indigo-600 dark:bg-indigo-900/30' : 'bg-amber-50 text-amber-600 dark:bg-amber-900/30'}`}>
-                      {t.expense_type === 'FIXED' ? 'Fixo' : 'Variável'}
-                    </span>
-                  </div>
-
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between text-xs text-slate-500">
-                      <div className="flex items-center gap-1.5"><Calendar size={14}/> {new Date(t.date).toLocaleDateString('pt-BR')}</div>
-                      <div className="flex items-center gap-1.5"><CreditCard size={14}/> {t.payment_method}</div>
-                    </div>
-                    
-                    <div className="pt-3 border-t border-slate-50 dark:border-slate-800 flex items-center justify-between">
-                      <span className="text-xs font-bold text-slate-400 uppercase">Valor</span>
-                      <span className="text-lg font-black text-rose-600">R$ {t.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
-                    </div>
-                  </div>
-                </div>
-              );
-            })
-          ) : (
-            <div className="col-span-full py-12 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-dashed border-slate-200 dark:border-slate-700 text-center">
-              <p className="text-slate-400 font-medium">Nenhuma despesa recente para exibir.</p>
-            </div>
-          )}
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </div>

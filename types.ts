@@ -8,6 +8,7 @@ export interface Category {
   name: string;
   icon: string;
   color: string;
+  user_id?: string | null;
 }
 
 export interface Transaction {

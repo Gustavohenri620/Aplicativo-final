@@ -11,7 +11,8 @@ import {
   X,
   Check,
   Tags,
-  Target
+  Target,
+  LogOut
 } from 'lucide-react';
 import { UserProfile } from '../types';
 
@@ -22,6 +23,7 @@ interface LayoutProps {
   onAddClick: () => void;
   userProfile: UserProfile;
   onUpdateProfile: (name: string, photo: string, goal: string) => void;
+  onLogout: () => void;
 }
 
 const Layout: React.FC<LayoutProps> = ({ 
@@ -30,7 +32,8 @@ const Layout: React.FC<LayoutProps> = ({
   setActiveTab, 
   onAddClick,
   userProfile,
-  onUpdateProfile
+  onUpdateProfile,
+  onLogout
 }) => {
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   
@@ -44,7 +47,6 @@ const Layout: React.FC<LayoutProps> = ({
   // Robust Name Logic
   const rawName = userProfile?.full_name || '';
   const displayName = rawName.trim().length > 0 ? rawName : 'Visitante';
-  const goal = userProfile?.financial_goal || 'Definir objetivo';
 
   const navItems = [
     { id: 'dashboard', label: 'Início', icon: LayoutDashboard },
@@ -86,7 +88,6 @@ const Layout: React.FC<LayoutProps> = ({
         className="flex items-center gap-4 mb-8 p-4 rounded-2xl bg-slate-800 cursor-pointer hover:bg-slate-700 transition-colors group"
       >
         <div className="relative">
-          {/* Foto Aumentada Desktop */}
           <div className="w-16 h-16 rounded-full bg-slate-700 overflow-hidden flex items-center justify-center border-4 border-slate-600 shadow-md shrink-0">
             {userProfile.avatar_url ? (
               <img src={userProfile.avatar_url} alt="Profile" className="w-full h-full object-cover" />
@@ -94,19 +95,13 @@ const Layout: React.FC<LayoutProps> = ({
               <User size={32} className="text-slate-400" />
             )}
           </div>
-          <div className="absolute 0 bottom-0 right-0 bg-slate-900 p-1.5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-sm border border-slate-800">
+          <div className="absolute bottom-0 right-0 bg-slate-900 p-1.5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-sm border border-slate-800">
             <Camera size={12} className="text-indigo-400" />
           </div>
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-xs text-slate-400 font-medium uppercase tracking-wider mb-0.5">Olá,</p>
           <p className="text-lg font-bold text-white truncate leading-tight">{displayName}</p>
-          {userProfile.financial_goal && (
-            <div className="flex items-center gap-1.5 mt-2 bg-indigo-900/30 px-2 py-1 rounded-lg border border-indigo-500/20">
-              <Target size={10} className="text-indigo-400" />
-              <p className="text-[10px] font-medium text-indigo-300 truncate">{userProfile.financial_goal}</p>
-            </div>
-          )}
         </div>
       </div>
 
@@ -120,7 +115,7 @@ const Layout: React.FC<LayoutProps> = ({
               onClick={() => setActiveTab(item.id)}
               className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
                 isActive 
-                  ? 'bg-indigo-600 text-white shadow-md shadow-indigo-100' 
+                  ? 'bg-indigo-600 text-white shadow-md' 
                   : 'text-slate-400 hover:bg-slate-800'
               }`}
             >
@@ -130,21 +125,45 @@ const Layout: React.FC<LayoutProps> = ({
           );
         })}
       </nav>
+
+      <button 
+        onClick={onLogout}
+        className="mt-auto flex items-center gap-3 px-4 py-3 rounded-xl text-slate-400 hover:bg-rose-500/10 hover:text-rose-400 transition-all duration-200"
+      >
+        <LogOut size={20} />
+        <span className="font-medium">Sair da conta</span>
+      </button>
     </div>
   );
 
   return (
     <div className="min-h-screen dark bg-slate-950">
       
+      {/* Top Header Bar (Desktop/Mobile) */}
+      <header className="lg:pl-72 fixed top-0 left-0 right-0 h-16 bg-slate-950/80 backdrop-blur-md border-b border-slate-900 z-40 flex items-center justify-between px-6">
+        <div className="flex items-center gap-2">
+           <div className="lg:hidden w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white">
+             <ArrowUpCircle size={20} />
+           </div>
+           <h1 className="text-lg font-black text-white tracking-tight">FinanceFlow</h1>
+        </div>
+        
+        <button 
+          onClick={onLogout}
+          className="flex items-center gap-2 px-3 py-1.5 bg-slate-900 hover:bg-rose-900/20 text-slate-400 hover:text-rose-400 rounded-xl border border-slate-800 hover:border-rose-900/50 transition-all font-bold text-xs"
+        >
+          <LogOut size={14} />
+          <span>Sair</span>
+        </button>
+      </header>
+
       {/* Desktop Sidebar */}
-      <aside className="hidden lg:block fixed left-0 top-0 bottom-0 w-72 bg-slate-900 border-r border-slate-800 z-30">
+      <aside className="hidden lg:block fixed left-0 top-0 bottom-0 w-72 bg-slate-900 border-r border-slate-800 z-50">
         <SidebarContent />
       </aside>
 
       {/* Mobile Bottom Navigation */}
       <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-slate-900 border-t border-slate-800 px-4 pb-safe pt-2 z-50 flex items-end justify-between h-20 shadow-[0_-5px_20px_rgba(0,0,0,0.05)]">
-        
-        {/* Primeiros 2 itens */}
         <div className="flex w-full justify-around items-end pb-4">
           <button 
             onClick={() => setActiveTab('dashboard')}
@@ -163,17 +182,15 @@ const Layout: React.FC<LayoutProps> = ({
           </button>
         </div>
 
-        {/* Botão Central de Adicionar */}
         <div className="relative -top-6">
           <button 
             onClick={onAddClick}
-            className="w-14 h-14 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full shadow-lg shadow-indigo-900/50 flex items-center justify-center transform transition-transform hover:scale-105 active:scale-95 border-4 border-slate-950"
+            className="w-14 h-14 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full shadow-lg flex items-center justify-center transform transition-transform hover:scale-105 active:scale-95 border-4 border-slate-950"
           >
             <Plus size={28} strokeWidth={3} />
           </button>
         </div>
 
-        {/* Últimos 2 itens */}
         <div className="flex w-full justify-around items-end pb-4">
            <button 
             onClick={() => setActiveTab('expenses')}
@@ -194,7 +211,7 @@ const Layout: React.FC<LayoutProps> = ({
       </nav>
 
       {/* Main Content Area */}
-      <main className="lg:pl-72 min-h-screen">
+      <main className="lg:pl-72 pt-16 min-h-screen">
         <div className="p-4 lg:p-8 max-w-7xl mx-auto pb-24 lg:pb-8">
           {React.Children.map(children, child => {
              if (React.isValidElement(child)) {
@@ -277,20 +294,30 @@ const Layout: React.FC<LayoutProps> = ({
                 </div>
               </div>
 
-              <div className="flex gap-3 pt-2">
+              <div className="flex flex-col gap-3 pt-2">
+                <div className="flex gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setIsProfileModalOpen(false)}
+                    className="flex-1 py-3 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold rounded-xl transition-colors hover:bg-slate-200 dark:hover:bg-slate-700"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    className="flex-1 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-lg transition-colors flex items-center justify-center gap-2"
+                  >
+                    <Check size={18} />
+                    Salvar
+                  </button>
+                </div>
                 <button
                   type="button"
-                  onClick={() => setIsProfileModalOpen(false)}
-                  className="flex-1 py-3 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold rounded-xl transition-colors hover:bg-slate-200 dark:hover:bg-slate-700"
+                  onClick={onLogout}
+                  className="w-full py-3 bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 font-bold rounded-xl transition-colors flex items-center justify-center gap-2 mt-2"
                 >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  className="flex-1 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-lg shadow-indigo-200 dark:shadow-indigo-900/50 transition-colors flex items-center justify-center gap-2"
-                >
-                  <Check size={18} />
-                  Salvar
+                  <LogOut size={18} />
+                  Sair da Conta
                 </button>
               </div>
             </form>
