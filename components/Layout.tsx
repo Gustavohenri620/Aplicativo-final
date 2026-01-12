@@ -82,12 +82,15 @@ const Layout: React.FC<LayoutProps> = ({
 
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSyncing) return;
+    
     // Chamar função de atualização e aguardar confirmação antes de fechar
     try {
       await onUpdateProfile(tempName, tempPhoto, tempGoal, tempWhatsapp);
       setIsProfileModalOpen(false);
     } catch (err) {
-      // O erro é tratado no App.tsx via Toast
+      // O erro já é tratado no App.tsx via Toast
+      console.error("Falha ao salvar perfil no Layout:", err);
     }
   };
 
