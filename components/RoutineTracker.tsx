@@ -9,8 +9,7 @@ import {
   Brain, Banknote, Coffee, Heart, Utensils,
   ChevronRight, Apple, ListPlus, Info,
   ChevronDown, GlassWater, Book, PlayCircle,
-  X, Play, Pause, Volume2, VolumeX, Maximize2,
-  Activity, MessageSquare,
+  X, Activity, MessageSquare,
   Sparkle
 } from 'lucide-react';
 import { RoutineItem, UserProfile } from '../types';
@@ -26,7 +25,6 @@ interface RoutineTrackerProps {
 interface Exercise {
   name: string;
   reps: string;
-  video: string;
 }
 
 interface WorkoutTemplate {
@@ -42,9 +40,9 @@ const WORKOUT_LIBRARY: WorkoutTemplate[] = [
     category: "Hipertrofia",
     desc: "Foco em volume de peitoral e tríceps ferradura.",
     exercises: [
-      { name: "Supino Reto", reps: "4x10", video: "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJ1N2R4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4JmVwPXYxX2ludGVybmFsX2dpZl9ieV9pZCZjdD1n/3o7TKL9Fh3p90E6OJy/giphy.mp4" },
-      { name: "Supino Inclinado", reps: "3x12", video: "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJ1N2R4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4JmVwPXYxX2ludGVybmFsX2dpZl9ieV9pZCZjdD1n/l41lTfuxS5zP3wD1S/giphy.mp4" },
-      { name: "Tríceps Pulley", reps: "4x12", video: "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJ1N2R4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4JmVwPXYxX2ludGVybmFsX2dpZl9ieV9pZCZjdD1n/3o7TKVUn7iM8FMEU24/giphy.mp4" }
+      { name: "Supino Reto", reps: "4x10" },
+      { name: "Supino Inclinado", reps: "3x12" },
+      { name: "Tríceps Pulley", reps: "4x12" }
     ]
   },
   { 
@@ -52,9 +50,9 @@ const WORKOUT_LIBRARY: WorkoutTemplate[] = [
     category: "Hipertrofia",
     desc: "Largura das costas e pico do bíceps.",
     exercises: [
-      { name: "Puxada Aberta", reps: "4x10", video: "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJ1N2R4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4JmVwPXYxX2ludGVybmFsX2dpZl9ieV9pZCZjdD1n/l0HlSgH9iO07X97Pi/giphy.mp4" },
-      { name: "Remada Curvada", reps: "3x12", video: "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJ1N2R4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4Jmx4JmVwPXYxX2ludGVybmFsX2dpZl9ieV9pZCZjdD1n/l0HlSgH9iO07X97Pi/giphy.mp4" },
-      { name: "Rosca Direta", reps: "3x10", video: "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJ1N2R4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4JmVwPXYxX2ludGVybmFsX2dpZl9ieV9pZCZjdD1n/l41lWjZk3p3E7z6h2/giphy.mp4" }
+      { name: "Puxada Aberta", reps: "4x10" },
+      { name: "Remada Curvada", reps: "3x12" },
+      { name: "Rosca Direta", reps: "3x10" }
     ]
   },
   { 
@@ -62,9 +60,9 @@ const WORKOUT_LIBRARY: WorkoutTemplate[] = [
     category: "Força",
     desc: "Treino pesado para membros inferiores.",
     exercises: [
-      { name: "Agachamento", reps: "4x8", video: "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJ1N2R4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4JmVwPXYxX2ludGVybmFsX2dpZl9ieV9pZCZjdD1n/l41lTfuxS5zP3wD1S/giphy.mp4" },
-      { name: "Leg Press", reps: "3x12", video: "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJ1N2R4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4JmVwPXYxX2ludGVybmFsX2dpZl9ieV9pZCZjdD1n/3o7TKL9Fh3p90E6OJy/giphy.mp4" },
-      { name: "Cadeira Extensora", reps: "3x15", video: "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJ1N2R4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4JmVwPXYxX2ludGVybmFsX2dpZl9ieV9pZCZjdD1n/3o7TKv6eMdwW556d1K/giphy.mp4" }
+      { name: "Agachamento", reps: "4x8" },
+      { name: "Leg Press", reps: "3x12" },
+      { name: "Cadeira Extensora", reps: "3x15" }
     ]
   },
   { 
@@ -72,8 +70,8 @@ const WORKOUT_LIBRARY: WorkoutTemplate[] = [
     category: "Estética",
     desc: "Deltoides em 3D e trapézio imponente.",
     exercises: [
-      { name: "Desenvolvimento", reps: "4x10", video: "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJ1N2R4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4JmVwPXYxX2ludGVybmFsX2dpZl9ieV9pZCZjdD1n/3o7TKVUn7iM8FMEU24/giphy.mp4" },
-      { name: "Elevação Lateral", reps: "4x15", video: "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJ1N2R4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4JmVwPXYxX2ludGVybmFsX2dpZl9ieV9pZCZjdD1n/3o7TKtkX7p9m8m7m8M/giphy.mp4" }
+      { name: "Desenvolvimento", reps: "4x10" },
+      { name: "Elevação Lateral", reps: "4x15" }
     ]
   },
   { 
@@ -81,8 +79,8 @@ const WORKOUT_LIBRARY: WorkoutTemplate[] = [
     category: "Saúde",
     desc: "Estabilidade lombar e definição abdominal.",
     exercises: [
-      { name: "Prancha", reps: "3x60s", video: "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJ1N2R4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4JmVwPXYxX2ludGVybmFsX2dpZl9ieV9pZCZjdD1n/3o7TKp7mBvH5Q1iP6w/giphy.mp4" },
-      { name: "Abdominal Supra", reps: "3x20", video: "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJ1N2R4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4Jmx4JmVwPXYxX2ludGVybmFsX2dpZl9ieV9pZCZjdD1n/l0HlSgH9iO07X97Pi/giphy.mp4" }
+      { name: "Prancha", reps: "3x60s" },
+      { name: "Abdominal Supra", reps: "3x20" }
     ]
   },
   { 
@@ -90,8 +88,8 @@ const WORKOUT_LIBRARY: WorkoutTemplate[] = [
     category: "Cardio",
     desc: "Queima calórica máxima em apenas 20 min.",
     exercises: [
-      { name: "Burpees", reps: "4x30s", video: "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJ1N2R4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4JmVwPXYxX2ludGVybmFsX2dpZl9ieV9pZCZjdD1n/3o7TKVUn7iM8FMEU24/giphy.mp4" },
-      { name: "Polichinelos", reps: "4x30s", video: "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJ1N2R4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4JmVwPXYxX2ludGVybmFsX2dpZl9ieV9pZCZjdD1n/3o7TKp7mBvH5Q1iP6w/giphy.mp4" }
+      { name: "Burpees", reps: "4x30s" },
+      { name: "Polichinelos", reps: "4x30s" }
     ]
   }
 ];
@@ -111,82 +109,11 @@ const SMART_SUGGESTIONS = {
   ]
 };
 
-const VideoPlayer = ({ src }: { src: string }) => {
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const [isPlaying, setIsPlaying] = useState(true);
-  const [isMuted, setIsMuted] = useState(true);
-  const [progress, setProgress] = useState(0);
-
-  useEffect(() => {
-    const video = videoRef.current;
-    if (!video) return;
-    video.load();
-    video.play().catch(() => setIsPlaying(false));
-    setIsPlaying(true);
-    const updateProgress = () => {
-      const p = (video.currentTime / video.duration) * 100;
-      setProgress(p || 0);
-    };
-    video.addEventListener('timeupdate', updateProgress);
-    return () => video.removeEventListener('timeupdate', updateProgress);
-  }, [src]);
-
-  const togglePlay = () => {
-    if (videoRef.current?.paused) {
-      videoRef.current.play();
-      setIsPlaying(true);
-    } else {
-      videoRef.current?.pause();
-      setIsPlaying(false);
-    }
-  };
-
-  return (
-    <div className="relative group aspect-video rounded-[2.5rem] overflow-hidden bg-slate-950 border border-slate-800 shadow-2xl">
-      <video
-        ref={videoRef}
-        src={src}
-        autoPlay
-        muted={isMuted}
-        loop
-        playsInline
-        className="w-full h-full object-cover"
-        onClick={togglePlay}
-      />
-      <div className="absolute inset-x-0 bottom-0 p-6 bg-gradient-to-t from-black/90 via-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-        <div className="flex flex-col gap-4">
-          <div className="h-1.5 w-full bg-white/20 rounded-full overflow-hidden">
-             <div className="h-full bg-indigo-500 transition-all duration-100" style={{ width: `${progress}%` }} />
-          </div>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <button onClick={togglePlay} className="p-2.5 bg-white/10 hover:bg-white/20 rounded-xl text-white transition-all">
-                {isPlaying ? <Pause size={20} fill="currentColor" /> : <Play size={20} fill="currentColor" />}
-              </button>
-              <button onClick={() => setIsMuted(!isMuted)} className="p-2.5 bg-white/10 hover:bg-white/20 rounded-xl text-white transition-all">
-                {isMuted ? <VolumeX size={20} /> : <Volume2 size={20} />}
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-      {!isPlaying && (
-        <div className="absolute inset-0 flex items-center justify-center bg-black/40 pointer-events-none">
-           <div className="w-16 h-16 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center border border-white/20">
-              <Play size={32} fill="white" className="text-white ml-1" />
-           </div>
-        </div>
-      )}
-    </div>
-  );
-};
-
 const RoutineTracker: React.FC<RoutineTrackerProps> = ({ routines, userProfile, onAdd, onToggle, onDelete }) => {
   const [activeSubTab, setActiveSubTab] = useState<'TASK' | 'WORKOUT'>('TASK');
   const [inputValue, setInputValue] = useState('');
   const [showXP, setShowXP] = useState<string | null>(null);
   const [selectedWorkoutPreview, setSelectedWorkoutPreview] = useState<WorkoutTemplate | null>(null);
-  const [activeExerciseIndex, setActiveExerciseIndex] = useState(0);
 
   const filteredItems = routines.filter(item => item.type === activeSubTab);
   
@@ -443,7 +370,6 @@ const RoutineTracker: React.FC<RoutineTrackerProps> = ({ routines, userProfile, 
                       key={idx} 
                       onClick={() => {
                         setSelectedWorkoutPreview(workout);
-                        setActiveExerciseIndex(0);
                       }}
                       className="group flex items-center justify-between p-3.5 bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 hover:border-indigo-500 transition-all shadow-sm cursor-pointer"
                     >
@@ -469,7 +395,7 @@ const RoutineTracker: React.FC<RoutineTrackerProps> = ({ routines, userProfile, 
                             <Plus size={16} />
                           </button>
                           <div className="w-8 h-8 flex items-center justify-center text-indigo-500 opacity-0 group-hover:opacity-100 transition-opacity">
-                             <PlayCircle size={18} />
+                             <ChevronRight size={18} />
                           </div>
                        </div>
                     </div>
@@ -481,45 +407,45 @@ const RoutineTracker: React.FC<RoutineTrackerProps> = ({ routines, userProfile, 
 
       {selectedWorkoutPreview && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-300" onClick={() => setSelectedWorkoutPreview(null)}>
-           <div className="w-full max-w-4xl bg-white dark:bg-slate-900 rounded-[3rem] shadow-2xl overflow-hidden flex flex-col max-h-[95vh] lg:max-h-[85vh] animate-in zoom-in-95 duration-300" onClick={(e) => e.stopPropagation()}>
+           <div className="w-full max-w-2xl bg-white dark:bg-slate-900 rounded-[3rem] shadow-2xl overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-300" onClick={(e) => e.stopPropagation()}>
               <div className="px-8 py-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/50">
                  <div className="flex items-center gap-4">
                     <div className="w-12 h-12 bg-indigo-600 text-white rounded-2xl flex items-center justify-center shadow-lg"><Dumbbell size={24} /></div>
-                    <div><h2 className="text-xl font-black text-slate-800 dark:text-white">{selectedWorkoutPreview.title}</h2><div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest"><Activity size={10} className="text-indigo-500" /> {selectedWorkoutPreview.category}</div></div>
+                    <div>
+                      <h2 className="text-xl font-black text-slate-800 dark:text-white">{selectedWorkoutPreview.title}</h2>
+                      <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest"><Activity size={10} className="text-indigo-500" /> {selectedWorkoutPreview.category}</div>
+                    </div>
                  </div>
                  <button onClick={() => setSelectedWorkoutPreview(null)} className="p-3 bg-slate-100 dark:bg-slate-800 text-slate-400 hover:text-rose-500 rounded-2xl transition-all"><X size={24} /></button>
               </div>
-              <div className="flex-1 overflow-hidden grid grid-cols-1 lg:grid-cols-12">
-                 <div className="lg:col-span-7 bg-slate-50 dark:bg-slate-950 p-6 lg:p-8 flex flex-col gap-6 overflow-y-auto no-scrollbar">
-                    <div className="space-y-4">
-                       <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2 text-indigo-500"><PlayCircle size={14} fill="currentColor" /><span className="text-[10px] font-black uppercase tracking-widest">Demonstração: {selectedWorkoutPreview.exercises[activeExerciseIndex].name}</span></div>
-                          <div className="px-3 py-1 bg-indigo-500/10 text-indigo-500 rounded-full text-[9px] font-black uppercase tracking-tighter">Técnica Perfeita</div>
-                       </div>
-                       <VideoPlayer src={selectedWorkoutPreview.exercises[activeExerciseIndex].video} />
-                    </div>
-                    <div className="p-6 bg-white dark:bg-slate-900 rounded-[2rem] border border-slate-100 dark:border-slate-800 shadow-sm space-y-3">
-                       <h4 className="text-xs font-black text-slate-800 dark:text-white uppercase tracking-widest flex items-center gap-2"><Info size={14} className="text-indigo-500" /> Por que fazer?</h4>
-                       <p className="text-[11px] font-bold text-slate-500 dark:text-slate-400 leading-relaxed">{selectedWorkoutPreview.desc}</p>
+              <div className="flex-1 overflow-y-auto no-scrollbar p-6 lg:p-8 space-y-6">
+                 <div className="p-6 bg-slate-50 dark:bg-slate-800/50 rounded-[2rem] border border-slate-100 dark:border-slate-800 shadow-sm space-y-3">
+                    <h4 className="text-xs font-black text-slate-800 dark:text-white uppercase tracking-widest flex items-center gap-2"><Info size={14} className="text-indigo-500" /> Descrição do Treino</h4>
+                    <p className="text-sm font-bold text-slate-500 dark:text-slate-400 leading-relaxed">{selectedWorkoutPreview.desc}</p>
+                 </div>
+
+                 <div>
+                    <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4 ml-1">Lista de Exercícios</h3>
+                    <div className="grid grid-cols-1 gap-3">
+                       {selectedWorkoutPreview.exercises.map((ex, i) => (
+                          <div key={i} className="flex items-center justify-between p-5 bg-white dark:bg-slate-800 rounded-2xl border-2 border-slate-50 dark:border-slate-800 shadow-sm">
+                             <div className="flex items-center gap-4">
+                                <div className="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-black text-sm shadow-md">{i + 1}</div>
+                                <div>
+                                  <p className="text-base font-black text-slate-800 dark:text-white">{ex.name}</p>
+                                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">Séries/Reps: {ex.reps}</p>
+                                </div>
+                             </div>
+                             <div className="p-2 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-500 rounded-lg">
+                               <CheckCircle2 size={20} />
+                             </div>
+                          </div>
+                       ))}
                     </div>
                  </div>
-                 <div className="lg:col-span-5 border-l border-slate-100 dark:border-slate-800 p-6 lg:p-8 flex flex-col gap-6 bg-white dark:bg-slate-900 overflow-y-auto no-scrollbar">
-                    <div>
-                       <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4 ml-1">Ficha de Exercícios</h3>
-                       <div className="space-y-3">
-                          {selectedWorkoutPreview.exercises.map((ex, i) => (
-                             <button key={i} onClick={() => setActiveExerciseIndex(i)} className={`w-full flex items-center justify-between p-4 rounded-2xl border-2 transition-all text-left ${activeExerciseIndex === i ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20' : 'border-slate-50 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30 hover:border-slate-200'}`}>
-                                <div className="flex items-center gap-4">
-                                   <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-black text-xs ${activeExerciseIndex === i ? 'bg-indigo-600 text-white' : 'bg-white dark:bg-slate-700 text-slate-400'}`}>{i + 1}</div>
-                                   <div><p className={`text-sm font-black ${activeExerciseIndex === i ? 'text-indigo-700 dark:text-indigo-300' : 'text-slate-800 dark:text-white'}`}>{ex.name}</p><p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">{ex.reps}</p></div>
-                                </div>
-                             </button>
-                          ))}
-                       </div>
-                    </div>
-                    <div className="mt-auto pt-6 space-y-4">
-                       <button onClick={() => { onAdd({ title: selectedWorkoutPreview.title, completed: false, type: 'WORKOUT' }); setSelectedWorkoutPreview(null); }} className="w-full py-5 bg-indigo-600 text-white font-black text-xs uppercase tracking-widest rounded-3xl shadow-2xl hover:bg-indigo-700 active:scale-95 transition-all flex items-center justify-center gap-3"><Plus size={20} strokeWidth={3} /> Adicionar este Treino</button>
-                    </div>
+
+                 <div className="pt-4">
+                    <button onClick={() => { onAdd({ title: selectedWorkoutPreview.title, completed: false, type: 'WORKOUT' }); setSelectedWorkoutPreview(null); }} className="w-full py-5 bg-indigo-600 text-white font-black text-xs uppercase tracking-widest rounded-3xl shadow-2xl hover:bg-indigo-700 active:scale-95 transition-all flex items-center justify-center gap-3"><Plus size={20} strokeWidth={3} /> Adicionar este Treino à Minha Rotina</button>
                  </div>
               </div>
            </div>
