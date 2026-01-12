@@ -41,3 +41,13 @@ export interface UserProfile {
   avatar_url?: string;
   financial_goal?: string;
 }
+
+export interface RoutineItem {
+  id: string;
+  title: string;
+  completed: boolean;
+  type: 'TASK' | 'WORKOUT';
+  category?: string;
+  user_id: string;
+  created_at: string;
+}

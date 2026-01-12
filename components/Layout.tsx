@@ -12,7 +12,8 @@ import {
   Check,
   Tags,
   Target,
-  LogOut
+  LogOut,
+  CalendarDays
 } from 'lucide-react';
 import { UserProfile } from '../types';
 
@@ -37,19 +38,18 @@ const Layout: React.FC<LayoutProps> = ({
 }) => {
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   
-  // State for form inputs
   const [tempName, setTempName] = useState('');
   const [tempPhoto, setTempPhoto] = useState('');
   const [tempGoal, setTempGoal] = useState('');
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   
-  // Robust Name Logic
   const rawName = userProfile?.full_name || '';
   const displayName = rawName.trim().length > 0 ? rawName : 'Visitante';
 
   const navItems = [
     { id: 'dashboard', label: 'Início', icon: LayoutDashboard },
+    { id: 'routines', label: 'Rotinas', icon: CalendarDays },
     { id: 'income', label: 'Receitas', icon: ArrowUpCircle },
     { id: 'expenses', label: 'Despesas', icon: ArrowDownCircle },
     { id: 'planning', label: 'Metas', icon: BarChart3 },
@@ -82,7 +82,6 @@ const Layout: React.FC<LayoutProps> = ({
 
   const SidebarContent = () => (
     <div className="flex flex-col h-full py-6 px-4">
-      {/* Profile Section Desktop */}
       <div 
         onClick={handleOpenProfile}
         className="flex items-center gap-4 mb-8 p-4 rounded-2xl bg-slate-800 cursor-pointer hover:bg-slate-700 transition-colors group"
@@ -138,12 +137,10 @@ const Layout: React.FC<LayoutProps> = ({
 
   return (
     <div className="min-h-screen dark bg-slate-950">
-      
-      {/* Top Header Bar (Desktop/Mobile) */}
       <header className="lg:pl-72 fixed top-0 left-0 right-0 h-16 bg-slate-950/80 backdrop-blur-md border-b border-slate-900 z-40 flex items-center justify-between px-6">
         <div className="flex items-center gap-2">
            <div className="lg:hidden w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white">
-             <ArrowUpCircle size={20} />
+             <CalendarDays size={20} />
            </div>
            <h1 className="text-lg font-black text-white tracking-tight">FinanceFlow</h1>
         </div>
@@ -157,28 +154,26 @@ const Layout: React.FC<LayoutProps> = ({
         </button>
       </header>
 
-      {/* Desktop Sidebar */}
       <aside className="hidden lg:block fixed left-0 top-0 bottom-0 w-72 bg-slate-900 border-r border-slate-800 z-50">
         <SidebarContent />
       </aside>
 
-      {/* Mobile Bottom Navigation */}
       <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-slate-900 border-t border-slate-800 px-4 pb-safe pt-2 z-50 flex items-end justify-between h-20 shadow-[0_-5px_20px_rgba(0,0,0,0.05)]">
         <div className="flex w-full justify-around items-end pb-4">
           <button 
             onClick={() => setActiveTab('dashboard')}
             className={`flex flex-col items-center gap-1 ${activeTab === 'dashboard' ? 'text-indigo-400' : 'text-slate-400'}`}
           >
-            <LayoutDashboard size={24} strokeWidth={activeTab === 'dashboard' ? 2.5 : 2} />
+            <LayoutDashboard size={24} />
             <span className="text-[10px] font-medium">Início</span>
           </button>
 
           <button 
-            onClick={() => setActiveTab('income')}
-            className={`flex flex-col items-center gap-1 ${activeTab === 'income' ? 'text-indigo-400' : 'text-slate-400'}`}
+            onClick={() => setActiveTab('routines')}
+            className={`flex flex-col items-center gap-1 ${activeTab === 'routines' ? 'text-indigo-400' : 'text-slate-400'}`}
           >
-            <ArrowUpCircle size={24} strokeWidth={activeTab === 'income' ? 2.5 : 2} />
-            <span className="text-[10px] font-medium">Receitas</span>
+            <CalendarDays size={24} />
+            <span className="text-[10px] font-medium">Rotinas</span>
           </button>
         </div>
 
@@ -196,21 +191,20 @@ const Layout: React.FC<LayoutProps> = ({
             onClick={() => setActiveTab('expenses')}
             className={`flex flex-col items-center gap-1 ${activeTab === 'expenses' ? 'text-indigo-400' : 'text-slate-400'}`}
           >
-            <ArrowDownCircle size={24} strokeWidth={activeTab === 'expenses' ? 2.5 : 2} />
-            <span className="text-[10px] font-medium">Despesas</span>
+            <ArrowDownCircle size={24} />
+            <span className="text-[10px] font-medium">Contas</span>
           </button>
 
           <button 
-            onClick={() => setActiveTab('categories')}
-            className={`flex flex-col items-center gap-1 ${activeTab === 'categories' || activeTab === 'planning' ? 'text-indigo-400' : 'text-slate-400'}`}
+            onClick={() => setActiveTab('planning')}
+            className={`flex flex-col items-center gap-1 ${activeTab === 'planning' ? 'text-indigo-400' : 'text-slate-400'}`}
           >
-            <Tags size={24} strokeWidth={activeTab === 'categories' || activeTab === 'planning' ? 2.5 : 2} />
-            <span className="text-[10px] font-medium">Categorias</span>
+            <Target size={24} />
+            <span className="text-[10px] font-medium">Metas</span>
           </button>
         </div>
       </nav>
 
-      {/* Main Content Area */}
       <main className="lg:pl-72 pt-16 min-h-screen">
         <div className="p-4 lg:p-8 max-w-7xl mx-auto pb-24 lg:pb-8">
           {React.Children.map(children, child => {
@@ -222,7 +216,6 @@ const Layout: React.FC<LayoutProps> = ({
         </div>
       </main>
 
-      {/* Profile Edit Modal */}
       {isProfileModalOpen && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
           <div 
@@ -311,14 +304,6 @@ const Layout: React.FC<LayoutProps> = ({
                     Salvar
                   </button>
                 </div>
-                <button
-                  type="button"
-                  onClick={onLogout}
-                  className="w-full py-3 bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 font-bold rounded-xl transition-colors flex items-center justify-center gap-2 mt-2"
-                >
-                  <LogOut size={18} />
-                  Sair da Conta
-                </button>
               </div>
             </form>
           </div>
