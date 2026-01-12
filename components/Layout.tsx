@@ -87,51 +87,19 @@ const Layout: React.FC<LayoutProps> = ({
       await onUpdateProfile(tempName, tempPhoto, tempGoal, tempWhatsapp);
       setIsProfileModalOpen(false);
     } catch (err) {
-      console.error("Erro ao salvar perfil:", err);
+      console.error("Erro ao salvar perfil no Layout:", err);
     }
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        // Redimensionamento otimizado para avatar (400px é perfeito para UI)
-        const MAX_SIZE = 400; 
-        let width = img.width;
-        let height = img.height;
-
-        if (width > height) {
-          if (width > MAX_SIZE) {
-            height *= MAX_SIZE / width;
-            width = MAX_SIZE;
-          }
-        } else {
-          if (height > MAX_SIZE) {
-            width *= MAX_SIZE / height;
-            height = MAX_SIZE;
-          }
-        }
-
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext('2d');
-        if (ctx) {
-          ctx.imageSmoothingEnabled = true;
-          ctx.imageSmoothingQuality = 'high';
-          ctx.drawImage(img, 0, 0, width, height);
-          // Reduz o peso da string Base64 drasticamente mantendo qualidade
-          const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
-          setTempPhoto(dataUrl);
-        }
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setTempPhoto(reader.result as string);
       };
-      img.src = event.target?.result as string;
-    };
-    reader.readAsDataURL(file);
+      reader.readAsDataURL(file);
+    }
   };
 
   const SidebarContent = () => (
@@ -204,7 +172,7 @@ const Layout: React.FC<LayoutProps> = ({
             {isSyncing ? (
               <div className="flex items-center gap-2">
                 <CloudUpload size={14} className="text-indigo-400 animate-pulse" />
-                <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">Gravando...</span>
+                <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">Sincronizando...</span>
               </div>
             ) : (
               <div className="flex items-center gap-2 group cursor-help">
@@ -213,7 +181,7 @@ const Layout: React.FC<LayoutProps> = ({
                   <CheckCircle2 size={6} className="absolute -bottom-0.5 -right-0.5 text-emerald-300" />
                 </div>
                 <div className="flex flex-col -space-y-0.5">
-                  <span className="text-[10px] font-black text-emerald-500 uppercase tracking-widest leading-none">Nuvem OK</span>
+                  <span className="text-[10px] font-black text-emerald-500 uppercase tracking-widest leading-none">Nuvem Conectada</span>
                   {lastSyncTime && (
                     <span className="text-[8px] font-bold text-slate-500 lowercase leading-none">às {lastSyncTime}</span>
                   )}
@@ -283,7 +251,7 @@ const Layout: React.FC<LayoutProps> = ({
                     disabled={isSyncing}
                   />
                 </div>
-                <p className="text-sm text-slate-500 font-bold uppercase tracking-widest text-[10px]">Alterar Foto</p>
+                <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Alterar Foto de Perfil</p>
               </div>
 
               <div className="space-y-4">
@@ -302,7 +270,7 @@ const Layout: React.FC<LayoutProps> = ({
                 <div className="space-y-2">
                   <label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
                     <Target size={12} className="text-indigo-500" />
-                    Objetivo de Vida
+                    Meta Financeira
                   </label>
                   <input
                     disabled={isSyncing}
@@ -339,7 +307,7 @@ const Layout: React.FC<LayoutProps> = ({
                     ) : (
                       <CheckCircle2 size={20} />
                     )}
-                    {isSyncing ? 'Salvando Alterações...' : 'Salvar Perfil'}
+                    {isSyncing ? 'Sincronizando...' : 'Confirmar e Salvar'}
                   </button>
               </div>
             </form>

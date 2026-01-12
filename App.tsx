@@ -88,7 +88,6 @@ const App: React.FC = () => {
   const fetchInitialData = async (userId: string, email: string) => {
     setLoading(true);
     try {
-      // 1. Perfil
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('*')
@@ -108,12 +107,10 @@ const App: React.FC = () => {
           financial_goal: '',
           whatsapp_number: ''
         };
-        const { error: upsertError } = await supabase.from('profiles').upsert(currentProfile);
-        if (upsertError) console.error("Erro ao criar perfil inicial:", upsertError);
+        await supabase.from('profiles').upsert(currentProfile);
       }
       setUserProfile(currentProfile);
 
-      // 2. Dados Relacionados
       const [categoriesRes, transactionsRes, budgetsRes, routinesRes] = await Promise.all([
         supabase.from('categories').select('*').or(`user_id.eq.${userId},user_id.is.null`),
         supabase.from('transactions').select('*').eq('user_id', userId).order('date', { ascending: false }),
@@ -129,7 +126,7 @@ const App: React.FC = () => {
       updateSyncStamp();
     } catch (error) {
       console.error('Erro ao carregar dados:', error);
-      showToast('Erro de sincronismo. Verifique sua conexão.', 'error');
+      showToast('Erro ao carregar seus dados da nuvem.', 'error');
     } finally {
       setLoading(false);
     }
@@ -160,10 +157,10 @@ const App: React.FC = () => {
       
       setUserProfile(data || profileToSave);
       updateSyncStamp();
-      showToast('Perfil sincronizado com sucesso!');
+      showToast('Perfil salvo com sucesso!');
     } catch (error: any) {
       console.error('Erro ao salvar perfil:', error);
-      showToast('Falha ao sincronizar perfil.', 'error');
+      showToast('Ocorreu um erro ao salvar na nuvem.', 'error');
       throw error; 
     } finally {
       setIsSyncing(false);
@@ -187,7 +184,7 @@ const App: React.FC = () => {
       
       setRoutines(prev => [newItem as RoutineItem, ...prev]);
       updateSyncStamp();
-      showToast('Rotina salva na nuvem!');
+      showToast('Rotina criada!');
     } catch (error) {
       console.error('Erro ao salvar rotina:', error);
       showToast('Erro ao sincronizar rotina.', 'error');
@@ -221,10 +218,10 @@ const App: React.FC = () => {
       setRoutines(prev => prev.map(r => r.id === id ? { ...r, completed } : r));
       setUserProfile(prev => prev ? { ...prev, xp: newXP } : null);
       updateSyncStamp();
-      showToast(completed ? 'Progresso salvo! +XP' : 'Progresso atualizado');
+      showToast(completed ? 'Progresso concluído! +XP' : 'Status atualizado');
     } catch (error) {
       console.error('Erro ao sincronizar status da rotina:', error);
-      showToast('Erro ao sincronizar progresso.', 'error');
+      showToast('Erro ao atualizar status.', 'error');
     } finally {
       setIsSyncing(false);
     }
@@ -239,10 +236,10 @@ const App: React.FC = () => {
       
       setRoutines(prev => prev.filter(r => r.id !== id));
       updateSyncStamp();
-      showToast('Rotina removida.', 'delete');
+      showToast('Rotina excluída.', 'delete');
     } catch (error) {
       console.error('Erro ao deletar rotina:', error);
-      showToast('Falha ao excluir rotina.', 'error');
+      showToast('Falha ao excluir.', 'error');
     } finally {
       setIsSyncing(false);
     }
@@ -266,7 +263,7 @@ const App: React.FC = () => {
       setTransactions(prev => [newT as Transaction, ...prev]);
       setIsFormOpen(false);
       updateSyncStamp();
-      showToast('Lançamento sincronizado!');
+      showToast('Lançamento salvo!');
     } catch (error) {
       console.error('Erro ao salvar transação:', error);
       showToast('Falha ao salvar lançamento.', 'error');
@@ -289,10 +286,10 @@ const App: React.FC = () => {
       setEditingTransaction(undefined);
       setIsFormOpen(false);
       updateSyncStamp();
-      showToast('Alteração salva!');
+      showToast('Registro atualizado!');
     } catch (error) {
       console.error('Erro ao atualizar transação:', error);
-      showToast('Erro ao atualizar registro.', 'error');
+      showToast('Erro ao atualizar.', 'error');
     } finally {
       setIsSyncing(false);
     }
@@ -309,9 +306,9 @@ const App: React.FC = () => {
       
       setTransactions(prev => prev.map(t => t.id === id ? { ...t, status: newStatus } : t));
       updateSyncStamp();
-      showToast('Status atualizado!');
+      showToast('Status modificado!');
     } catch (error) {
-      console.error('Erro ao alterar status financeiro:', error);
+      console.error('Erro ao alterar status:', error);
       showToast('Falha ao atualizar status.', 'error');
     } finally {
       setIsSyncing(false);
@@ -320,7 +317,7 @@ const App: React.FC = () => {
 
   const handleDeleteTransaction = async (id: string) => {
     if (!user) return;
-    if (window.confirm('Excluir este registro permanentemente da nuvem?')) {
+    if (window.confirm('Excluir este registro?')) {
       setIsSyncing(true);
       try {
         const { error } = await supabase.from('transactions').delete().eq('id', id).eq('user_id', user.id);
@@ -328,10 +325,10 @@ const App: React.FC = () => {
         
         setTransactions(prev => prev.filter(t => t.id !== id));
         updateSyncStamp();
-        showToast('Registro excluído!', 'delete');
+        showToast('Registro apagado!', 'delete');
       } catch (error) {
-        console.error('Erro ao excluir registro:', error);
-        showToast('Falha ao excluir registro.', 'error');
+        console.error('Erro ao excluir:', error);
+        showToast('Falha ao excluir.', 'error');
       } finally {
         setIsSyncing(false);
       }
@@ -361,7 +358,7 @@ const App: React.FC = () => {
 
   const handleDeleteCategory = async (id: string) => {
     if (!user) return;
-    if (window.confirm('Excluir esta categoria permanentemente?')) {
+    if (window.confirm('Excluir esta categoria?')) {
       setIsSyncing(true);
       try {
         const { error } = await supabase.from('categories').delete().eq('id', id).eq('user_id', user.id);
@@ -372,7 +369,7 @@ const App: React.FC = () => {
         showToast('Categoria removida.', 'delete');
       } catch (error) {
         console.error('Erro ao remover categoria:', error);
-        showToast('Falha ao remover categoria.', 'error');
+        showToast('Falha ao remover.', 'error');
       } finally {
         setIsSyncing(false);
       }
@@ -391,7 +388,7 @@ const App: React.FC = () => {
       
       setBudgets(prev => [...prev.filter(b => b.id !== id), newB as Budget]);
       updateSyncStamp();
-      showToast('Meta atualizada com sucesso!');
+      showToast('Planejamento atualizado!');
     } catch (error) {
       console.error('Erro ao salvar orçamento:', error);
       showToast('Falha ao salvar meta.', 'error');
@@ -403,7 +400,7 @@ const App: React.FC = () => {
   const handleLogout = async () => {
     if (window.confirm('Deseja sair da sua conta?')) {
       await supabase.auth.signOut();
-      showToast('Até breve!', 'info');
+      showToast('Até a próxima!', 'info');
     }
   };
 
