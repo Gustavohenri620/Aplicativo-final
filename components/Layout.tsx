@@ -1,5 +1,5 @@
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { 
   LayoutDashboard, 
   ArrowUpCircle, 
@@ -18,7 +18,8 @@ import {
   CloudLightning,
   CloudOff,
   CloudUpload,
-  CheckCircle2
+  CheckCircle2,
+  Loader2
 } from 'lucide-react';
 import { UserProfile } from '../types';
 
@@ -67,22 +68,27 @@ const Layout: React.FC<LayoutProps> = ({
   ];
 
   const handleOpenProfile = () => {
-    setTempName(rawName);
+    setTempName(userProfile.full_name || '');
     setTempPhoto(userProfile.avatar_url || '');
     setTempGoal(userProfile.financial_goal || '');
     setTempWhatsapp(userProfile.whatsapp_number || '');
     setIsProfileModalOpen(true);
   };
 
-  const handleSaveProfile = (e: React.FormEvent) => {
+  const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
-    onUpdateProfile(tempName, tempPhoto, tempGoal, tempWhatsapp);
+    await onUpdateProfile(tempName, tempPhoto, tempGoal, tempWhatsapp);
     setIsProfileModalOpen(false);
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      // Limite de tamanho simples para evitar Base64 excessivo
+      if (file.size > 1024 * 512) { // 512KB
+        alert("A foto é muito grande. Escolha uma imagem de até 500KB.");
+        return;
+      }
       const reader = new FileReader();
       reader.onloadend = () => {
         setTempPhoto(reader.result as string);
@@ -348,6 +354,7 @@ const Layout: React.FC<LayoutProps> = ({
                 <div className="flex gap-3">
                   <button
                     type="button"
+                    disabled={isSyncing}
                     onClick={() => setIsProfileModalOpen(false)}
                     className="flex-1 py-3 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold rounded-xl transition-colors hover:bg-slate-200 dark:hover:bg-slate-700"
                   >
@@ -355,10 +362,11 @@ const Layout: React.FC<LayoutProps> = ({
                   </button>
                   <button
                     type="submit"
-                    className="flex-1 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-lg transition-colors flex items-center justify-center gap-2"
+                    disabled={isSyncing}
+                    className="flex-1 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-lg transition-colors flex items-center justify-center gap-2 disabled:opacity-70"
                   >
-                    <Check size={18} />
-                    Salvar
+                    {isSyncing ? <Loader2 size={18} className="animate-spin" /> : <Check size={18} />}
+                    {isSyncing ? 'Salvando...' : 'Salvar'}
                   </button>
                 </div>
               </div>
