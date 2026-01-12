@@ -7,8 +7,9 @@ import TransactionForm from './components/TransactionForm';
 import Planning from './components/Planning';
 import CategorySettings from './components/CategorySettings';
 import RoutineTracker from './components/RoutineTracker';
+import FinancialCalendar from './components/FinancialCalendar';
 import Auth from './components/Auth';
-import { Transaction, Category, Budget, TransactionType, UserProfile, RoutineItem } from './types';
+import { Transaction, Category, Budget, TransactionType, UserProfile, RoutineItem, TransactionStatus } from './types';
 import { DEFAULT_CATEGORIES } from './constants';
 import { X, Loader2, ArrowUpCircle, ArrowDownCircle, CheckCircle2, Trash2, Info, AlertCircle } from 'lucide-react';
 import { supabase } from './supabase';
@@ -35,6 +36,7 @@ const App: React.FC = () => {
   const [isAddMenuOpen, setIsAddMenuOpen] = useState(false);
   const [formType, setFormType] = useState<TransactionType>('EXPENSE');
   const [editingTransaction, setEditingTransaction] = useState<Transaction | undefined>();
+  const [prefilledDate, setPrefilledDate] = useState<string | undefined>();
 
   const showToast = useCallback((message: string, type: Toast['type'] = 'success') => {
     const id = crypto.randomUUID();
@@ -93,7 +95,6 @@ const App: React.FC = () => {
       const { data: budgetsData } = await supabase.from('budgets').select('*');
       if (budgetsData) setBudgets(budgetsData);
 
-      // Fetch routines
       const { data: routineData } = await supabase.from('routines').select('*').order('created_at', { ascending: true });
       if (routineData) setRoutines(routineData);
 
@@ -141,10 +142,10 @@ const App: React.FC = () => {
     if (!error) showToast('Item removido.', 'delete');
   };
 
-  // Finance Actions... (Simplified for context)
+  // Finance Actions
   const handleAddTransaction = async (data: Omit<Transaction, 'id' | 'user_id'>) => {
     if (!user) return;
-    const newT = { ...data, id: crypto.randomUUID(), user_id: user.id };
+    const newT = { ...data, id: crypto.randomUUID(), user_id: user.id, status: data.status || 'COMPLETED' };
     setTransactions(prev => [newT as Transaction, ...prev]);
     setIsFormOpen(false);
     await supabase.from('transactions').insert(newT);
@@ -159,6 +160,13 @@ const App: React.FC = () => {
     setIsFormOpen(false);
     await supabase.from('transactions').update(updated).eq('id', editingTransaction.id);
     showToast('Transação atualizada!');
+  };
+
+  const handleToggleTransactionStatus = async (id: string, currentStatus: TransactionStatus) => {
+    const newStatus: TransactionStatus = currentStatus === 'COMPLETED' ? 'PENDING' : 'COMPLETED';
+    setTransactions(prev => prev.map(t => t.id === id ? { ...t, status: newStatus } : t));
+    const { error } = await supabase.from('transactions').update({ status: newStatus }).eq('id', id);
+    if (!error) showToast(newStatus === 'COMPLETED' ? 'Lançamento confirmado! ✅' : 'Lançamento pendente ⏳');
   };
 
   const handleDeleteTransaction = async (id: string) => {
@@ -202,8 +210,9 @@ const App: React.FC = () => {
     switch (activeTab) {
       case 'dashboard': return <Dashboard transactions={transactions} categories={categories} setActiveTab={setActiveTab} userProfile={userProfile || { id: user.id, email: user.email }} />;
       case 'routines': return <RoutineTracker routines={routines} userProfile={userProfile || { id: user.id, email: user.email }} onAdd={handleAddRoutine} onToggle={handleToggleRoutine} onDelete={handleDeleteRoutine} />;
-      case 'income': return <TransactionList type="INCOME" transactions={transactions} categories={categories} onAdd={() => { setFormType('INCOME'); setIsFormOpen(true); }} onEdit={(t) => { setEditingTransaction(t); setFormType('INCOME'); setIsFormOpen(true); }} onDelete={handleDeleteTransaction} />;
-      case 'expenses': return <TransactionList type="EXPENSE" transactions={transactions} categories={categories} onAdd={() => { setFormType('EXPENSE'); setIsFormOpen(true); }} onEdit={(t) => { setEditingTransaction(t); setFormType('EXPENSE'); setIsFormOpen(true); }} onDelete={handleDeleteTransaction} />;
+      case 'financial-calendar': return <FinancialCalendar transactions={transactions} categories={categories} onToggleStatus={handleToggleTransactionStatus} onQuickAdd={(date) => { setPrefilledDate(date); setIsAddMenuOpen(true); }} />;
+      case 'income': return <TransactionList type="INCOME" transactions={transactions} categories={categories} onAdd={() => { setFormType('INCOME'); setPrefilledDate(undefined); setIsFormOpen(true); }} onEdit={(t) => { setEditingTransaction(t); setFormType('INCOME'); setIsFormOpen(true); }} onDelete={handleDeleteTransaction} />;
+      case 'expenses': return <TransactionList type="EXPENSE" transactions={transactions} categories={categories} onAdd={() => { setFormType('EXPENSE'); setPrefilledDate(undefined); setIsFormOpen(true); }} onEdit={(t) => { setEditingTransaction(t); setFormType('EXPENSE'); setIsFormOpen(true); }} onDelete={handleDeleteTransaction} />;
       case 'planning': return <Planning categories={categories} budgets={budgets} transactions={transactions} onSaveBudget={handleSaveBudget} />;
       case 'categories': return <CategorySettings categories={categories} onSave={handleSaveCategory} onDelete={handleDeleteCategory} />;
       default: return null;
@@ -211,7 +220,7 @@ const App: React.FC = () => {
   };
 
   return (
-    <Layout activeTab={activeTab} setActiveTab={setActiveTab} onAddClick={() => setIsAddMenuOpen(true)} userProfile={userProfile || { id: user.id, email: user.email }} onUpdateProfile={handleUpdateProfile} onLogout={handleLogout}>
+    <Layout activeTab={activeTab} setActiveTab={setActiveTab} onAddClick={() => { setPrefilledDate(undefined); setIsAddMenuOpen(true); }} userProfile={userProfile || { id: user.id, email: user.email }} onUpdateProfile={handleUpdateProfile} onLogout={handleLogout}>
       {renderContent()}
       <div className="fixed top-20 right-4 left-4 sm:left-auto sm:right-6 sm:w-80 z-[100] flex flex-col gap-3 pointer-events-none">
         {toasts.map(t => (
@@ -226,15 +235,21 @@ const App: React.FC = () => {
          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200">
             <div className="absolute inset-0" onClick={() => setIsAddMenuOpen(false)} />
             <div className="relative w-full max-w-sm bg-white dark:bg-slate-900 rounded-t-[2rem] sm:rounded-[2rem] p-6 shadow-2xl animate-in slide-in-from-bottom duration-300">
-               <div className="flex justify-between items-center mb-8"><h3 className="text-xl font-bold dark:text-white">Adicionar Novo</h3><button onClick={() => setIsAddMenuOpen(false)} className="p-2 bg-slate-100 dark:bg-slate-800 rounded-full text-slate-500"><X size={20} /></button></div>
+               <div className="flex justify-between items-center mb-8">
+                  <div>
+                    <h3 className="text-xl font-bold dark:text-white">Adicionar Novo</h3>
+                    {prefilledDate && <p className="text-xs text-indigo-500 font-bold uppercase mt-1">Para o dia {new Date(prefilledDate + 'T12:00:00').toLocaleDateString('pt-BR')}</p>}
+                  </div>
+                  <button onClick={() => setIsAddMenuOpen(false)} className="p-2 bg-slate-100 dark:bg-slate-800 rounded-full text-slate-500"><X size={20} /></button>
+               </div>
                <div className="grid grid-cols-2 gap-4 mb-4">
-                  <button onClick={() => { setFormType('INCOME'); setEditingTransaction(undefined); setIsFormOpen(true); setIsAddMenuOpen(false); }} className="flex flex-col items-center gap-4 p-6 bg-emerald-50 dark:bg-emerald-900/20 border-2 border-emerald-100 dark:border-emerald-900/50 rounded-3xl"><div className="w-14 h-14 bg-emerald-100 dark:bg-emerald-900/50 text-emerald-600 rounded-2xl flex items-center justify-center"><ArrowUpCircle size={32} /></div><span className="font-bold text-emerald-700 dark:text-emerald-400">Receita</span></button>
-                  <button onClick={() => { setFormType('EXPENSE'); setEditingTransaction(undefined); setIsFormOpen(true); setIsAddMenuOpen(false); }} className="flex flex-col items-center gap-4 p-6 bg-rose-50 dark:bg-rose-900/20 border-2 border-rose-100 dark:border-rose-900/50 rounded-3xl"><div className="w-14 h-14 bg-rose-100 dark:bg-rose-900/50 text-rose-600 rounded-2xl flex items-center justify-center"><ArrowDownCircle size={32} /></div><span className="font-bold text-rose-700 dark:text-rose-400">Despesa</span></button>
+                  <button onClick={() => { setFormType('INCOME'); setEditingTransaction(undefined); setIsFormOpen(true); setIsAddMenuOpen(false); }} className="flex flex-col items-center gap-4 p-6 bg-emerald-50 dark:bg-emerald-900/20 border-2 border-emerald-100 dark:border-emerald-900/50 rounded-3xl group"><div className="w-14 h-14 bg-emerald-100 dark:bg-emerald-900/50 text-emerald-600 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform"><ArrowUpCircle size={32} /></div><span className="font-bold text-emerald-700 dark:text-emerald-400">Receita</span></button>
+                  <button onClick={() => { setFormType('EXPENSE'); setEditingTransaction(undefined); setIsFormOpen(true); setIsAddMenuOpen(false); }} className="flex flex-col items-center gap-4 p-6 bg-rose-50 dark:bg-rose-900/20 border-2 border-rose-100 dark:border-rose-900/50 rounded-3xl group"><div className="w-14 h-14 bg-rose-100 dark:bg-rose-900/50 text-rose-600 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform"><ArrowDownCircle size={32} /></div><span className="font-bold text-rose-700 dark:text-rose-400">Despesa</span></button>
                </div>
             </div>
          </div>
       )}
-      {isFormOpen && <TransactionForm type={formType} categories={categories} onSubmit={editingTransaction ? handleUpdateTransaction : handleAddTransaction} onClose={() => setIsFormOpen(false)} initialData={editingTransaction} />}
+      {isFormOpen && <TransactionForm type={formType} categories={categories} onSubmit={editingTransaction ? handleUpdateTransaction : handleAddTransaction} onClose={() => setIsFormOpen(false)} initialData={editingTransaction} prefilledDate={prefilledDate} />}
     </Layout>
   );
 };

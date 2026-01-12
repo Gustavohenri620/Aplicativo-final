@@ -1,7 +1,8 @@
 
-import React, { useState } from 'react';
-import { X, Calendar, Tag, Check, CreditCard, MoreHorizontal } from 'lucide-react';
-import { Transaction, Category, TransactionType, ExpenseType, IncomeType } from '../types';
+import React, { useState, useEffect } from 'react';
+// Fix: Add missing CheckCircle2 and AlertCircle imports from lucide-react
+import { X, Calendar, Tag, Check, CreditCard, MoreHorizontal, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Transaction, Category, TransactionType, ExpenseType, IncomeType, TransactionStatus } from '../types';
 import { PAYMENT_METHODS, ICON_MAP } from '../constants';
 
 interface TransactionFormProps {
@@ -10,17 +11,25 @@ interface TransactionFormProps {
   onSubmit: (transaction: Omit<Transaction, 'id' | 'user_id'>) => void;
   onClose: () => void;
   initialData?: Transaction;
+  prefilledDate?: string;
 }
 
-const TransactionForm: React.FC<TransactionFormProps> = ({ type, categories, onSubmit, onClose, initialData }) => {
+const TransactionForm: React.FC<TransactionFormProps> = ({ type, categories, onSubmit, onClose, initialData, prefilledDate }) => {
   const [description, setDescription] = useState(initialData?.description || '');
   const [amount, setAmount] = useState(initialData?.amount?.toString() || '');
-  const [date, setDate] = useState(initialData?.date || new Date().toISOString().split('T')[0]);
+  const [date, setDate] = useState(initialData?.date || prefilledDate || new Date().toISOString().split('T')[0]);
   const [categoryId, setCategoryId] = useState(initialData?.category_id || (categories.length > 0 ? categories[0].id : ''));
   const [expenseType, setExpenseType] = useState<ExpenseType>(initialData?.expense_type || 'VARIABLE');
   const [incomeType, setIncomeType] = useState<IncomeType>(initialData?.income_type || 'SALARY');
   const [paymentMethod, setPaymentMethod] = useState(initialData?.payment_method || PAYMENT_METHODS[0]);
   const [recurring, setRecurring] = useState(initialData?.recurring || false);
+  const [status, setStatus] = useState<TransactionStatus>(initialData?.status || 'COMPLETED');
+
+  useEffect(() => {
+    if (prefilledDate && !initialData) {
+      setDate(prefilledDate);
+    }
+  }, [prefilledDate, initialData]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -36,6 +45,7 @@ const TransactionForm: React.FC<TransactionFormProps> = ({ type, categories, onS
       income_type: type === 'INCOME' ? incomeType : undefined,
       payment_method: paymentMethod,
       recurring,
+      status,
     });
     onClose();
   };
@@ -59,7 +69,7 @@ const TransactionForm: React.FC<TransactionFormProps> = ({ type, categories, onS
           <h2 className="text-lg font-bold text-slate-800 dark:text-white">
             {initialData ? 'Editar' : 'Nova'} {type === 'INCOME' ? 'Receita' : 'Despesa'}
           </h2>
-          <div className="w-10"></div> {/* Spacer for center alignment */}
+          <div className="w-10"></div>
         </div>
 
         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto no-scrollbar">
@@ -128,12 +138,33 @@ const TransactionForm: React.FC<TransactionFormProps> = ({ type, categories, onS
                </div>
             </div>
 
+            {/* Status Selector */}
+            <div className="bg-slate-50 dark:bg-slate-800 p-4 rounded-2xl">
+              <label className="block text-xs font-bold text-slate-400 mb-3 uppercase tracking-widest">Status da Atividade</label>
+              <div className="flex gap-2">
+                <button 
+                  type="button"
+                  onClick={() => setStatus('COMPLETED')}
+                  className={`flex-1 py-3 rounded-xl font-bold text-xs uppercase transition-all flex items-center justify-center gap-2 ${status === 'COMPLETED' ? 'bg-emerald-500 text-white shadow-lg' : 'bg-slate-100 dark:bg-slate-700 text-slate-400'}`}
+                >
+                  <CheckCircle2 size={16} /> Finalizado
+                </button>
+                <button 
+                  type="button"
+                  onClick={() => setStatus('PENDING')}
+                  className={`flex-1 py-3 rounded-xl font-bold text-xs uppercase transition-all flex items-center justify-center gap-2 ${status === 'PENDING' ? 'bg-amber-500 text-white shadow-lg' : 'bg-slate-100 dark:bg-slate-700 text-slate-400'}`}
+                >
+                  <AlertCircle size={16} /> Pendente
+                </button>
+              </div>
+            </div>
+
             {/* Category Grid Selection */}
             <div>
                <label className="flex items-center gap-2 text-sm font-bold text-slate-700 dark:text-slate-300 mb-3">
                  <Tag size={16} /> Categoria
                </label>
-               <div className="grid grid-cols-4 sm:grid-cols-4 gap-3 max-h-48 overflow-y-auto pr-1">
+               <div className="grid grid-cols-4 gap-3 max-h-40 overflow-y-auto no-scrollbar pr-1">
                  {categories.map((cat) => {
                    const Icon = ICON_MAP[cat.icon] || MoreHorizontal;
                    const isSelected = categoryId === cat.id;
@@ -218,7 +249,7 @@ const TransactionForm: React.FC<TransactionFormProps> = ({ type, categories, onS
               type="submit"
               className={`w-full py-4 text-white text-lg font-bold rounded-2xl shadow-lg transition-transform active:scale-[0.98] ${bgColor} ${type === 'INCOME' ? 'shadow-emerald-200 dark:shadow-none' : 'shadow-rose-200 dark:shadow-none'}`}
             >
-              {initialData ? 'Atualizar Transação' : 'Confirmar'}
+              {initialData ? 'Atualizar Transação' : 'Confirmar Lançamento'}
             </button>
           </div>
         </form>

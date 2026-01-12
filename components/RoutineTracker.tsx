@@ -1,5 +1,5 @@
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { 
   Dumbbell, CheckCircle2, 
   Plus, Trash2, Zap, Trophy, 
@@ -24,7 +24,13 @@ import {
   Star,
   BellRing,
   Calendar as CalendarIcon,
-  ChevronLeft
+  ChevronLeft,
+  Crown,
+  Sword,
+  Ghost,
+  Diamond,
+  Zap as ZapBolt,
+  Award
 } from 'lucide-react';
 import { RoutineItem, UserProfile } from '../types';
 
@@ -85,6 +91,25 @@ const WORKOUT_LIBRARY: WorkoutTemplate[] = [
   }
 ];
 
+const RANKS = [
+  { level: 1, name: "Iniciante", icon: SeedlingIcon, color: "text-emerald-500", bg: "bg-emerald-500/10" },
+  { level: 5, name: "Guerreiro", icon: Sword, color: "text-amber-500", bg: "bg-amber-500/10" },
+  { level: 10, name: "Mestre", icon: Crown, color: "text-purple-500", bg: "bg-purple-500/10" },
+  { level: 20, name: "Lenda", icon: Diamond, color: "text-indigo-500", bg: "bg-indigo-500/10" },
+];
+
+function SeedlingIcon(props: any) {
+  return <Leaf {...props} />;
+}
+
+const BADGES = [
+  { id: 'water', emoji: '💧', name: 'Hidratado', desc: '5 Metas de água', required: 5 },
+  { id: 'beast', emoji: '🦁', name: 'Monstro', desc: '10 Treinos concluídos', required: 10 },
+  { id: 'zen', emoji: '🧘', name: 'Zen', desc: '5 Meditações', required: 5 },
+  { id: 'early', emoji: '🌅', name: 'Madrugador', desc: '10 Metas matinais', required: 10 },
+  { id: 'fire', emoji: '🔥', name: 'Imparável', desc: '7 Dias de streak', required: 7 },
+];
+
 const SUGGESTIONS: Record<'TASK' | 'WORKOUT', Array<{ title: string; icon: any; color: string; period: string }>> = {
   TASK: [
     { title: "Meta de Água (3L)", icon: GlassWater, color: "text-blue-500", period: "morning" },
@@ -119,12 +144,34 @@ interface RoutineTrackerProps {
 
 const RoutineTracker: React.FC<RoutineTrackerProps> = ({ routines, userProfile, onAdd, onToggle, onDelete, onOpenProfile }) => {
   const [activeSubTab, setActiveSubTab] = useState<'TASK' | 'WORKOUT'>('TASK');
-  const [viewMode, setViewMode] = useState<'LIST' | 'CALENDAR'>('LIST');
+  const [viewMode, setViewMode] = useState<'LIST' | 'CALENDAR' | 'EVOLUTION'>('LIST');
   const [inputValue, setInputValue] = useState('');
   const [selectedPeriod, setSelectedPeriod] = useState<string>('morning');
   const [celebratingId, setCelebratingId] = useState<string | null>(null);
   const [selectedWorkoutPreview, setSelectedWorkoutPreview] = useState<WorkoutTemplate | null>(null);
   const [currentCalendarDate, setCurrentCalendarDate] = useState(new Date());
+  const [showLevelUp, setShowLevelUp] = useState(false);
+
+  // XP & Level Logic
+  const totalCompleted = routines.filter(r => r.completed).length;
+  // Let's assume some base XP from a real historical tracking, but for now derive from current routines
+  // We'll add a multiplier for Workouts
+  const currentXP = routines.reduce((acc, r) => {
+    if (!r.completed) return acc;
+    return acc + (r.type === 'WORKOUT' ? 100 : 50);
+  }, 0);
+
+  const XP_PER_LEVEL = 500;
+  const level = Math.floor(currentXP / XP_PER_LEVEL) + 1;
+  const xpInLevel = currentXP % XP_PER_LEVEL;
+  const levelProgress = (xpInLevel / XP_PER_LEVEL) * 100;
+
+  const currentRank = useMemo(() => {
+    return [...RANKS].reverse().find(r => level >= r.level) || RANKS[0];
+  }, [level]);
+
+  // Streak simulation (could be calculated from historical routine completion dates)
+  const streak = 7;
 
   const filteredItems = routines.filter(item => item.type === activeSubTab);
   const completedItems = filteredItems.filter(item => item.completed);
@@ -134,12 +181,6 @@ const RoutineTracker: React.FC<RoutineTrackerProps> = ({ routines, userProfile, 
   const globalTotal = routines.length;
   const globalCompleted = routines.filter(r => r.completed).length;
   const globalProgress = globalTotal > 0 ? (globalCompleted / globalTotal) * 100 : 0;
-
-  const currentXP = routines.filter(r => r.completed).length * 50;
-  const level = Math.floor(currentXP / 500) + 1;
-  const xpInLevel = currentXP % 500;
-
-  const streak = 7;
 
   const motivationMessage = useMemo(() => {
     if (globalTotal === 0) return "Crie sua primeira meta verde hoje!";
@@ -153,6 +194,13 @@ const RoutineTracker: React.FC<RoutineTrackerProps> = ({ routines, userProfile, 
     if (completed) {
       setCelebratingId(id);
       setTimeout(() => setCelebratingId(null), 1200);
+      
+      // Check if this toggle would trigger a level up (simplified)
+      const item = routines.find(r => r.id === id);
+      const xpGain = item?.type === 'WORKOUT' ? 100 : 50;
+      if (xpInLevel + xpGain >= XP_PER_LEVEL) {
+        setTimeout(() => setShowLevelUp(true), 600);
+      }
     }
     onToggle(id, completed);
   };
@@ -173,18 +221,6 @@ const RoutineTracker: React.FC<RoutineTrackerProps> = ({ routines, userProfile, 
     }
   };
 
-  const handleWhatsappReminder = (item: RoutineItem) => {
-    if (!userProfile?.whatsapp_number || userProfile.whatsapp_number.trim() === '') {
-      if (onOpenProfile) onOpenProfile();
-      alert("Por favor, cadastre seu número de WhatsApp no perfil para usar esta função.");
-      return;
-    }
-
-    const message = encodeURIComponent(`Olá! 🚀 Lembrete Finance&Routine:\n\nNão esqueça de concluir sua meta: *${item.title}* hoje!\n\nSua saúde financeira e física andam juntas. Vamos pra cima! 🔥`);
-    const whatsappUrl = `https://wa.me/${userProfile.whatsapp_number.replace(/\D/g, '')}?text=${message}`;
-    window.open(whatsappUrl, '_blank');
-  };
-
   const groupedItems = useMemo(() => {
     return {
       morning: filteredItems.filter(i => i.category === 'morning'),
@@ -194,13 +230,15 @@ const RoutineTracker: React.FC<RoutineTrackerProps> = ({ routines, userProfile, 
     };
   }, [filteredItems]);
 
+  // Fix: Group workout library by category to resolve "Cannot find name 'groupedLibrary'" error on lines 749 and 750
   const groupedLibrary = useMemo(() => {
-    const groups: Record<string, WorkoutTemplate[]> = {};
-    WORKOUT_LIBRARY.forEach(w => {
-      if (!groups[w.category]) groups[w.category] = [];
-      groups[w.category].push(w);
-    });
-    return groups;
+    return WORKOUT_LIBRARY.reduce((acc, workout) => {
+      if (!acc[workout.category]) {
+        acc[workout.category] = [];
+      }
+      acc[workout.category].push(workout);
+      return acc;
+    }, {} as Record<string, WorkoutTemplate[]>);
   }, []);
 
   // Calendar Logic
@@ -211,16 +249,13 @@ const RoutineTracker: React.FC<RoutineTrackerProps> = ({ routines, userProfile, 
     const daysInMonth = new Date(year, month + 1, 0).getDate();
     
     const days = [];
-    // Prev month padding
     const prevMonthLastDay = new Date(year, month, 0).getDate();
     for (let i = firstDayOfMonth - 1; i >= 0; i--) {
       days.push({ day: prevMonthLastDay - i, currentMonth: false, date: new Date(year, month - 1, prevMonthLastDay - i) });
     }
-    // Current month
     for (let i = 1; i <= daysInMonth; i++) {
       days.push({ day: i, currentMonth: true, date: new Date(year, month, i) });
     }
-    // Next month padding
     const remaining = 42 - days.length;
     for (let i = 1; i <= remaining; i++) {
       days.push({ day: i, currentMonth: false, date: new Date(year, month + 1, i) });
@@ -257,6 +292,7 @@ const RoutineTracker: React.FC<RoutineTrackerProps> = ({ routines, userProfile, 
         <div className="space-y-3">
           {items.map(item => {
             const isCelebrating = celebratingId === item.id;
+            const itemXP = item.type === 'WORKOUT' ? 100 : 50;
             
             return (
               <div key={item.id} className={`group relative flex flex-col sm:flex-row sm:items-center justify-between p-4 sm:p-5 rounded-[2rem] border-2 transition-all duration-300 ${item.completed ? 'bg-emerald-500/5 border-emerald-500/10 opacity-80' : 'bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800 hover:border-emerald-500/30 shadow-sm'}`}>
@@ -291,7 +327,7 @@ const RoutineTracker: React.FC<RoutineTrackerProps> = ({ routines, userProfile, 
                      </span>
                      <div className="flex items-center gap-1.5">
                        <span className={`text-[9px] font-black uppercase tracking-tighter transition-colors ${item.completed ? 'text-emerald-500' : 'text-slate-400'}`}>
-                         +50 XP
+                         +{itemXP} XP
                        </span>
                        {item.completed && (
                          <div className="flex items-center text-[8px] font-bold text-emerald-400 bg-emerald-400/10 px-1.5 py-0.5 rounded-full animate-in slide-in-from-left-1 duration-300">
@@ -305,7 +341,7 @@ const RoutineTracker: React.FC<RoutineTrackerProps> = ({ routines, userProfile, 
                 {isCelebrating && (
                   <div className="absolute left-1/2 -top-6 -translate-x-1/2 animate-in slide-in-from-bottom-2 fade-in duration-500 z-20">
                      <div className="bg-emerald-500 text-white text-[10px] font-black px-3 py-1.5 rounded-full shadow-lg flex items-center gap-1.5 whitespace-nowrap">
-                       <Trophy size={10} className="animate-bounce" /> BOA! +50 XP
+                       <Trophy size={10} className="animate-bounce" /> BOA! +{itemXP} XP
                      </div>
                   </div>
                 )}
@@ -313,7 +349,11 @@ const RoutineTracker: React.FC<RoutineTrackerProps> = ({ routines, userProfile, 
                 <div className="flex items-center gap-2 mt-4 sm:mt-0 ml-0 sm:ml-4">
                   {!item.completed && (
                     <button 
-                      onClick={() => handleWhatsappReminder(item)}
+                      onClick={() => {
+                        const message = encodeURIComponent(`Olá! 🚀 Lembrete Finance&Routine:\n\nNão esqueça de concluir sua meta: *${item.title}* hoje!\n\nSua saúde financeira e física andam juntas. Vamos pra cima! 🔥`);
+                        const whatsappUrl = `https://wa.me/${userProfile?.whatsapp_number?.replace(/\D/g, '')}?text=${message}`;
+                        window.open(whatsappUrl, '_blank');
+                      }}
                       title="Lembrar no WhatsApp"
                       className="flex items-center gap-2 px-4 py-2.5 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 rounded-2xl hover:bg-emerald-600 hover:text-white transition-all group/wa shadow-sm border border-emerald-100 dark:border-emerald-800/50 active:scale-95"
                     >
@@ -410,19 +450,81 @@ const RoutineTracker: React.FC<RoutineTrackerProps> = ({ routines, userProfile, 
           );
         })}
       </div>
+    </div>
+  );
 
-      <div className="mt-8 pt-6 border-t border-slate-100 dark:border-slate-800 flex flex-wrap gap-6 justify-center">
-         <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full bg-emerald-500/20" />
-            <span className="text-[10px] font-black text-slate-500 uppercase">Algumas tarefas</span>
+  const EvolutionView = () => (
+    <div className="space-y-8 animate-in fade-in duration-500">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+         {/* Rank Info */}
+         <div className="bg-white dark:bg-slate-900 p-8 rounded-[3rem] border border-slate-100 dark:border-slate-800 shadow-sm flex flex-col items-center text-center">
+            <div className={`w-24 h-24 ${currentRank.bg} ${currentRank.color} rounded-[2rem] flex items-center justify-center mb-6 shadow-xl`}>
+               <currentRank.icon size={48} />
+            </div>
+            <h2 className="text-2xl font-black text-slate-800 dark:text-white uppercase tracking-widest mb-1">{currentRank.name}</h2>
+            <p className="text-sm font-bold text-slate-400 mb-8 italic">Seu status atual na jornada</p>
+            
+            <div className="w-full space-y-4">
+               <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest">
+                  <span className="text-slate-400">Progresso do Nível {level}</span>
+                  <span className="text-emerald-500">{xpInLevel} / {XP_PER_LEVEL} XP</span>
+               </div>
+               <div className="h-6 bg-slate-50 dark:bg-slate-800 rounded-2xl p-1 shadow-inner relative overflow-hidden">
+                  <div 
+                    className="h-full bg-gradient-to-r from-emerald-500 to-emerald-400 rounded-xl transition-all duration-1000 shadow-lg shadow-emerald-500/20"
+                    style={{ width: `${levelProgress}%` }}
+                  />
+                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                     <span className="text-[8px] font-black text-slate-800 dark:text-white mix-blend-difference">{Math.round(levelProgress)}%</span>
+                  </div>
+               </div>
+            </div>
          </div>
-         <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full bg-emerald-500" />
-            <span className="text-[10px] font-black text-slate-500 uppercase">Majoritário</span>
+
+         {/* Badges / Trophy Room */}
+         <div className="bg-white dark:bg-slate-900 p-8 rounded-[3rem] border border-slate-100 dark:border-slate-800 shadow-sm">
+            <div className="flex items-center gap-3 mb-8">
+               <Award className="text-amber-500" />
+               <h3 className="text-lg font-black text-slate-800 dark:text-white uppercase tracking-widest">Conquistas</h3>
+            </div>
+            <div className="grid grid-cols-3 sm:grid-cols-5 gap-4">
+               {BADGES.map((badge) => {
+                 const isUnlocked = level >= 2; // For demo, unlock all above level 2
+                 return (
+                   <div key={badge.id} className={`flex flex-col items-center gap-2 p-3 rounded-2xl transition-all ${isUnlocked ? 'bg-slate-50 dark:bg-slate-800 group cursor-help' : 'opacity-30 grayscale'}`}>
+                      <span className="text-3xl filter drop-shadow-md group-hover:scale-125 transition-transform">{badge.emoji}</span>
+                      <span className="text-[8px] font-black text-slate-400 text-center uppercase leading-none">{badge.name}</span>
+                   </div>
+                 );
+               })}
+            </div>
          </div>
-         <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full bg-amber-400" />
-            <span className="text-[10px] font-black text-slate-500 uppercase">Dia Perfeito</span>
+      </div>
+
+      {/* Leveling Path */}
+      <div className="bg-white dark:bg-slate-900 p-8 rounded-[3rem] border border-slate-100 dark:border-slate-800 shadow-sm overflow-hidden">
+         <h3 className="text-lg font-black text-slate-800 dark:text-white uppercase tracking-widest mb-8 flex items-center gap-3">
+            <TrendingUp className="text-emerald-500" /> Trilha de Evolução
+         </h3>
+         <div className="relative">
+            <div className="absolute left-6 top-0 bottom-0 w-1 bg-slate-50 dark:bg-slate-800 rounded-full" />
+            <div className="space-y-12 relative z-10">
+               {[1, 5, 10, 20].map((lv) => {
+                 const isReached = level >= lv;
+                 const rankData = RANKS.find(r => r.level === lv);
+                 return (
+                   <div key={lv} className={`flex items-start gap-8 transition-opacity ${isReached ? 'opacity-100' : 'opacity-30'}`}>
+                      <div className={`w-12 h-12 rounded-2xl shrink-0 flex items-center justify-center font-black shadow-lg ${isReached ? 'bg-emerald-500 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-400'}`}>
+                         {lv}
+                      </div>
+                      <div className="pt-2">
+                         <h4 className="text-sm font-black text-slate-800 dark:text-white uppercase tracking-widest">{rankData?.name}</h4>
+                         <p className="text-xs font-bold text-slate-400 mt-1">Desbloqueia novos temas e ícones de avatar exclusivos.</p>
+                      </div>
+                   </div>
+                 );
+               })}
+            </div>
          </div>
       </div>
     </div>
@@ -483,6 +585,7 @@ const RoutineTracker: React.FC<RoutineTrackerProps> = ({ routines, userProfile, 
                 </div>
                 <p className="text-sm font-bold text-slate-500 dark:text-slate-400 mb-6">{motivationMessage}</p>
                 
+                {/* Aprimorada Barra de Progresso Linear Animada */}
                 <div className="w-full max-w-sm mb-6 group/progress">
                    <div className="flex justify-between items-end mb-2.5 px-0.5">
                       <div className="flex flex-col">
@@ -503,42 +606,35 @@ const RoutineTracker: React.FC<RoutineTrackerProps> = ({ routines, userProfile, 
                          <div className="absolute inset-0 bg-gradient-to-b from-white/20 to-transparent" />
                       </div>
                    </div>
-                   
-                   <div className="mt-3 flex items-center justify-between gap-4 px-1">
-                      <div className="flex items-center gap-1.5">
-                         <div className={`w-1.5 h-1.5 rounded-full ${activeSubTab === 'TASK' ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-700'}`} />
-                         <span className="text-[8px] font-black text-slate-500 uppercase tracking-tighter">Missões: {routines.filter(r => r.type === 'TASK' && r.completed).length}/{routines.filter(r => r.type === 'TASK').length}</span>
-                      </div>
-                      <div className="flex items-center gap-1.5">
-                         <div className={`w-1.5 h-1.5 rounded-full ${activeSubTab === 'WORKOUT' ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-700'}`} />
-                         <span className="text-[8px] font-black text-slate-500 uppercase tracking-tighter">Treinos: {routines.filter(r => r.type === 'WORKOUT' && r.completed).length}/{routines.filter(r => r.type === 'WORKOUT').length}</span>
-                      </div>
-                   </div>
                 </div>
 
                 <div className="w-full max-w-sm">
                    <div className="flex justify-between items-end mb-1 px-0.5">
-                      <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Nível {level}</span>
-                      <span className="text-[10px] font-black text-emerald-600">{xpInLevel}/500 XP</span>
+                      <div className="flex items-center gap-1.5">
+                         <span className={`text-[8px] font-black uppercase tracking-widest ${currentRank.color}`}>Nível {level} - {currentRank.name}</span>
+                         <currentRank.icon size={10} className={currentRank.color} />
+                      </div>
+                      <span className="text-[10px] font-black text-emerald-600">{xpInLevel}/{XP_PER_LEVEL} XP</span>
                    </div>
-                   <div className="h-3 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden p-0.5 shadow-inner">
-                      <div className="h-full bg-gradient-to-r from-emerald-500 to-emerald-300 rounded-full transition-all duration-1000 ease-out shadow-[0_0_8px_rgba(16,185,129,0.3)]" style={{ width: `${(xpInLevel / 500) * 100}%` }} />
+                   <div className="h-3 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden p-0.5 shadow-inner group cursor-pointer" onClick={() => setViewMode('EVOLUTION')}>
+                      <div className="h-full bg-gradient-to-r from-emerald-500 to-emerald-300 rounded-full transition-all duration-1000 ease-out shadow-[0_0_8px_rgba(16,185,129,0.3)]" style={{ width: `${levelProgress}%` }} />
+                      <div className="absolute top-0 right-0 h-full w-4 bg-emerald-400/20 blur-sm opacity-0 group-hover:opacity-100 transition-opacity" />
                    </div>
                 </div>
              </div>
           </div>
 
           <div className="flex flex-wrap gap-3 lg:w-1/2">
-             <div className="flex-1 min-w-[140px] bg-emerald-50 dark:bg-emerald-900/10 p-4 rounded-3xl border border-emerald-100 dark:border-emerald-800/50 transition-all hover:bg-emerald-100 dark:hover:bg-emerald-900/20 group">
+             <div className="flex-1 min-w-[140px] bg-emerald-50 dark:bg-emerald-900/10 p-4 rounded-3xl border border-emerald-100 dark:border-emerald-800/50 transition-all hover:bg-emerald-100 dark:hover:bg-emerald-900/20 group cursor-pointer" onClick={() => setViewMode('EVOLUTION')}>
                 <div className="flex items-center gap-2 mb-2 text-emerald-600">
                    <Medal size={16} className="group-hover:rotate-12 transition-transform" />
                    <span className="text-[9px] font-black uppercase tracking-widest">Coleção</span>
                 </div>
                 <div className="flex -space-x-2">
-                   {['🌿', '💧', '🥗'].map((emoji, i) => (
-                      <div key={i} className="w-8 h-8 rounded-full bg-white dark:bg-slate-700 border-2 border-emerald-50 dark:border-emerald-800 flex items-center justify-center text-xs shadow-sm hover:-translate-y-1 transition-transform cursor-default">{emoji}</div>
+                   {BADGES.slice(0, 3).map((badge, i) => (
+                      <div key={i} className="w-8 h-8 rounded-full bg-white dark:bg-slate-700 border-2 border-emerald-50 dark:border-emerald-800 flex items-center justify-center text-xs shadow-sm hover:-translate-y-1 transition-transform cursor-default">{badge.emoji}</div>
                    ))}
-                   <div className="w-8 h-8 rounded-full bg-emerald-500 border-2 border-white dark:border-slate-800 flex items-center justify-center text-[10px] font-black text-white shadow-sm">+5</div>
+                   <div className="w-8 h-8 rounded-full bg-emerald-500 border-2 border-white dark:border-slate-800 flex items-center justify-center text-[10px] font-black text-white shadow-sm">+{BADGES.length - 3}</div>
                 </div>
              </div>
              <div className="flex-1 min-w-[140px] bg-emerald-600 p-4 rounded-3xl border border-emerald-500 shadow-xl shadow-emerald-500/20 group cursor-pointer overflow-hidden relative active:scale-95 transition-all">
@@ -560,7 +656,10 @@ const RoutineTracker: React.FC<RoutineTrackerProps> = ({ routines, userProfile, 
              <ClipboardList size={16} /> Lista
            </button>
            <button onClick={() => setViewMode('CALENDAR')} className={`flex-1 sm:w-32 flex items-center justify-center gap-2 py-3 rounded-[1.5rem] font-black text-[10px] uppercase tracking-widest transition-all ${viewMode === 'CALENDAR' ? 'bg-white dark:bg-slate-800 text-emerald-600 shadow-xl' : 'text-slate-500'}`}>
-             <CalendarIcon size={16} /> Calendário
+             <CalendarIcon size={16} /> Agenda
+           </button>
+           <button onClick={() => setViewMode('EVOLUTION')} className={`flex-1 sm:w-32 flex items-center justify-center gap-2 py-3 rounded-[1.5rem] font-black text-[10px] uppercase tracking-widest transition-all ${viewMode === 'EVOLUTION' ? 'bg-white dark:bg-slate-800 text-emerald-600 shadow-xl' : 'text-slate-500'}`}>
+             <TrendingUp size={16} /> Evolução
            </button>
         </div>
 
@@ -574,6 +673,8 @@ const RoutineTracker: React.FC<RoutineTrackerProps> = ({ routines, userProfile, 
 
       {viewMode === 'CALENDAR' ? (
         <CalendarGrid />
+      ) : viewMode === 'EVOLUTION' ? (
+        <EvolutionView />
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
           <div className="lg:col-span-3 space-y-6">
@@ -629,7 +730,7 @@ const RoutineTracker: React.FC<RoutineTrackerProps> = ({ routines, userProfile, 
                       <Leaf size={40} className="animate-pulse" />
                     </div>
                     <h4 className="text-lg font-black text-slate-400 uppercase tracking-tighter">Plante seus hábitos.</h4>
-                    <p className="text-sm text-slate-400 max-w-[200px] mt-2 font-medium leading-relaxed">Sua rotina define o seu sucesso. Adicione uma meta para começar!</p>
+                    <p className="text-sm text-slate-400 max-w-[200px] mt-2 font-medium leading-relaxed">Sua rotina define o seu success. Adicione uma meta para começar!</p>
                   </div>
                 )}
              </div>
@@ -670,40 +771,84 @@ const RoutineTracker: React.FC<RoutineTrackerProps> = ({ routines, userProfile, 
                              <h4 className="text-[9px] font-black uppercase tracking-widest text-slate-400">{category}</h4>
                           </div>
                           <div className="space-y-2">
-                             {items.map((workout, idx) => (
-                               <div 
-                                 key={idx} 
-                                 onClick={() => setSelectedWorkoutPreview(workout)} 
-                                 className="bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-100 dark:border-slate-700 group hover:border-emerald-500 transition-all shadow-sm cursor-pointer flex items-center justify-between gap-3"
-                               >
-                                  <div className="min-w-0 flex-1">
-                                     <h4 className="text-[11px] font-black text-slate-800 dark:text-white truncate leading-tight group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
-                                        {workout.title}
-                                     </h4>
-                                     <p className="text-[9px] font-bold text-slate-400 mt-0.5 uppercase">{workout.exercises.length} Movimentos</p>
-                                  </div>
-                                  <button 
-                                    onClick={(e) => { 
-                                      e.stopPropagation(); 
-                                      onAdd({ title: workout.title, completed: false, type: 'WORKOUT', category: 'afternoon' }); 
-                                    }} 
-                                    className="shrink-0 w-8 h-8 bg-slate-50 dark:bg-slate-700/50 text-slate-400 hover:bg-emerald-600 hover:text-white rounded-full flex items-center justify-center transition-all shadow-sm active:scale-90"
-                                  >
-                                     <Plus size={16} />
-                                  </button>
-                               </div>
-                             ))}
-                          </div>
-                       </div>
-                     );
-                   })}
-                </div>
-             </div>
-          </div>
+                           {items.map((workout, idx) => (
+                             <div 
+                               key={idx} 
+                               onClick={() => setSelectedWorkoutPreview(workout)} 
+                               className="bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-100 dark:border-slate-700 group hover:border-emerald-500 transition-all shadow-sm cursor-pointer flex items-center justify-between gap-3"
+                             >
+                                <div className="min-w-0 flex-1">
+                                   <h4 className="text-[11px] font-black text-slate-800 dark:text-white truncate leading-tight group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
+                                      {workout.title}
+                                   </h4>
+                                   <p className="text-[9px] font-bold text-slate-400 mt-0.5 uppercase">{workout.exercises.length} Movimentos</p>
+                                </div>
+                                <button 
+                                  onClick={(e) => { 
+                                    e.stopPropagation(); 
+                                    onAdd({ title: workout.title, completed: false, type: 'WORKOUT', category: 'afternoon' }); 
+                                  }} 
+                                  className="shrink-0 w-8 h-8 bg-slate-50 dark:bg-slate-700/50 text-slate-400 hover:bg-emerald-600 hover:text-white rounded-full flex items-center justify-center transition-all shadow-sm active:scale-90"
+                                >
+                                   <Plus size={16} />
+                                </button>
+                             </div>
+                           ))}
+                        </div>
+                     </div>
+                   );
+                 })}
+              </div>
+           </div>
+        </div>
+      </div>
+      )}
+
+      {/* Level Up Celebration Modal */}
+      {showLevelUp && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-emerald-950/90 backdrop-blur-xl animate-in fade-in duration-500 overflow-hidden">
+           {/* Particles simulation (CSS) */}
+           <div className="absolute inset-0 pointer-events-none">
+             {[...Array(20)].map((_, i) => (
+               <div 
+                 key={i} 
+                 className="absolute animate-bounce" 
+                 style={{ 
+                   left: `${Math.random() * 100}%`, 
+                   top: `${Math.random() * 100}%`,
+                   animationDelay: `${Math.random() * 2}s`
+                 }}
+               >
+                 <Sparkles className="text-amber-400 opacity-20" size={Math.random() * 40 + 10} />
+               </div>
+             ))}
+           </div>
+           
+           <div className="relative text-center p-8 max-w-sm animate-in zoom-in duration-700 flex flex-col items-center">
+              <div className="relative mb-12">
+                 <div className="absolute inset-0 bg-emerald-500 blur-3xl opacity-20 animate-pulse rounded-full" />
+                 <div className="w-40 h-40 bg-white dark:bg-slate-900 rounded-[3rem] shadow-2xl flex items-center justify-center relative z-10 border-4 border-emerald-500 rotate-12">
+                    <Trophy size={80} className="text-amber-500" />
+                 </div>
+                 <div className="absolute -top-4 -right-4 w-16 h-16 bg-amber-500 text-white rounded-full flex items-center justify-center font-black text-xl shadow-lg animate-bounce z-20">
+                    Lv {level}
+                 </div>
+              </div>
+              
+              <h2 className="text-4xl font-black text-white uppercase tracking-tighter mb-2">Level Up!</h2>
+              <p className="text-emerald-100/70 font-bold mb-8">Você subiu para o nível {level} e desbloqueou a insígnia de {currentRank.name}!</p>
+              
+              <button 
+                onClick={() => setShowLevelUp(false)}
+                className="w-full py-5 bg-white text-emerald-900 font-black text-xs uppercase tracking-widest rounded-3xl shadow-2xl shadow-emerald-500/30 hover:bg-emerald-50 active:scale-95 transition-all"
+              >
+                Continuar Jornada
+              </button>
+           </div>
         </div>
       )}
 
-      {/* Modal - Green Themed */}
+      {/* Workout Modal */}
       {selectedWorkoutPreview && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-300" onClick={() => setSelectedWorkoutPreview(null)}>
            <div className="w-full max-w-lg bg-white dark:bg-slate-900 rounded-[3rem] shadow-2xl overflow-hidden flex flex-col max-h-[85vh] animate-in zoom-in-95 duration-300" onClick={(e) => e.stopPropagation()}>

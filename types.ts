@@ -2,6 +2,7 @@
 export type TransactionType = 'INCOME' | 'EXPENSE';
 export type ExpenseType = 'FIXED' | 'VARIABLE';
 export type IncomeType = 'SALARY' | 'EXTRA';
+export type TransactionStatus = 'PENDING' | 'COMPLETED';
 
 export interface Category {
   id: string;
@@ -23,6 +24,7 @@ export interface Transaction {
   payment_method?: string;
   recurring: boolean;
   user_id: string;
+  status: TransactionStatus;
 }
 
 export interface Budget {
