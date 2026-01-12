@@ -13,7 +13,8 @@ import {
   X, ChevronRight,
   MoreHorizontal,
   CalendarClock,
-  ArrowRightCircle
+  ArrowRightCircle,
+  CheckCircle2
 } from 'lucide-react';
 import { Transaction, Category, UserProfile } from '../types';
 import { ICON_MAP } from '../constants';
@@ -24,9 +25,17 @@ interface DashboardProps {
   setActiveTab: (tab: string) => void;
   userProfile?: UserProfile;
   onOpenProfile?: () => void;
+  onUpdateTransaction?: (transaction: Omit<Transaction, 'id' | 'user_id'>, id: string) => void;
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ transactions, categories, setActiveTab, userProfile, onOpenProfile }) => {
+const Dashboard: React.FC<DashboardProps> = ({ 
+  transactions, 
+  categories, 
+  setActiveTab, 
+  userProfile, 
+  onOpenProfile,
+  onUpdateTransaction 
+}) => {
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
   
   const now = new Date();
@@ -107,6 +116,16 @@ const Dashboard: React.FC<DashboardProps> = ({ transactions, categories, setActi
     if (diff === 0) return 'Hoje';
     if (diff === 1) return 'Amanhã';
     return date.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
+  };
+
+  const handleMarkAsPaid = (t: Transaction) => {
+    if (!onUpdateTransaction) return;
+    const today = new Date().toISOString().split('T')[0];
+    const { id, user_id, ...dataWithoutId } = t;
+    onUpdateTransaction({
+      ...dataWithoutId,
+      date: today
+    }, t.id);
   };
 
   return (
@@ -251,7 +270,7 @@ const Dashboard: React.FC<DashboardProps> = ({ transactions, categories, setActi
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* PRÓXIMOS LANÇAMENTOS (SUBSTITUI O COMPARATIVO SEMESTRAL) */}
+        {/* PRÓXIMOS LANÇAMENTOS */}
         <div className="lg:col-span-2 bg-white dark:bg-slate-900 p-6 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800">
           <div className="flex items-center justify-between mb-6">
              <div className="flex items-center gap-3">
@@ -289,11 +308,24 @@ const Dashboard: React.FC<DashboardProps> = ({ transactions, categories, setActi
                         <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{category?.name || 'Geral'}</p>
                       </div>
                     </div>
-                    <div className="text-right">
-                       <p className={`font-black text-sm ${isIncome ? 'text-emerald-500' : 'text-rose-500'}`}>
-                         {isIncome ? '+' : '-'} R$ {t.amount.toLocaleString('pt-BR')}
-                       </p>
-                       <p className="text-[10px] text-slate-400 font-medium">{t.payment_method}</p>
+                    <div className="flex items-center gap-4">
+                      <div className="text-right">
+                         <p className={`font-black text-sm ${isIncome ? 'text-emerald-500' : 'text-rose-500'}`}>
+                           {isIncome ? '+' : '-'} R$ {t.amount.toLocaleString('pt-BR')}
+                         </p>
+                         <p className="text-[10px] text-slate-400 font-medium">{t.payment_method}</p>
+                      </div>
+                      
+                      {/* Botão de Marcar como Pago (Apenas para Despesas) */}
+                      {!isIncome && (
+                        <button 
+                          onClick={() => handleMarkAsPaid(t)}
+                          className="p-2 text-slate-300 hover:text-emerald-500 dark:hover:text-emerald-400 transition-colors opacity-0 group-hover:opacity-100"
+                          title="Marcar como pago"
+                        >
+                          <CheckCircle2 size={24} />
+                        </button>
+                      )}
                     </div>
                   </div>
                 );
@@ -387,7 +419,7 @@ const Dashboard: React.FC<DashboardProps> = ({ transactions, categories, setActi
         </div>
       </div>
 
-      {/* DETALHAMENTO DIÁRIO (INTERAÇÃO GRÁFICO) */}
+      {/* DETALHAMENTO DIÁRIO */}
       {selectedDay && (
         <div className="animate-in slide-in-from-top-4 fade-in duration-300">
            <div className="bg-indigo-600 text-white rounded-3xl p-6 shadow-xl shadow-indigo-900/20 relative overflow-hidden">
@@ -448,7 +480,7 @@ const Dashboard: React.FC<DashboardProps> = ({ transactions, categories, setActi
         </div>
       )}
 
-      {/* ÚLTIMAS DESPESAS (PASSADO) */}
+      {/* ÚLTIMAS DESPESAS */}
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">

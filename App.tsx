@@ -93,7 +93,6 @@ const App: React.FC = () => {
       const { data: budgetsData } = await supabase.from('budgets').select('*');
       if (budgetsData) setBudgets(budgetsData);
 
-      // Fetch routines
       const { data: routineData } = await supabase.from('routines').select('*').order('created_at', { ascending: true });
       if (routineData) setRoutines(routineData);
 
@@ -120,7 +119,6 @@ const App: React.FC = () => {
     }
   };
 
-  // Routine Actions
   const handleAddRoutine = async (item: Omit<RoutineItem, 'id' | 'created_at' | 'user_id'>) => {
     if (!user) return;
     const newItem = { ...item, id: crypto.randomUUID(), user_id: user.id, created_at: new Date().toISOString() };
@@ -141,7 +139,6 @@ const App: React.FC = () => {
     if (!error) showToast('Item removido.', 'delete');
   };
 
-  // Finance Actions
   const handleAddTransaction = async (data: Omit<Transaction, 'id' | 'user_id'>) => {
     if (!user) return;
     const newT = { ...data, id: crypto.randomUUID(), user_id: user.id };
@@ -151,13 +148,19 @@ const App: React.FC = () => {
     showToast('Transação registrada!');
   };
 
-  const handleUpdateTransaction = async (data: Omit<Transaction, 'id' | 'user_id'>) => {
-    if (!editingTransaction || !user) return;
-    const updated = { ...data, id: editingTransaction.id, user_id: user.id };
-    setTransactions(prev => prev.map(t => t.id === editingTransaction.id ? updated as Transaction : t));
-    setEditingTransaction(undefined);
-    setIsFormOpen(false);
-    await supabase.from('transactions').update(updated).eq('id', editingTransaction.id);
+  const handleUpdateTransaction = async (data: Omit<Transaction, 'id' | 'user_id'>, explicitId?: string) => {
+    const idToUpdate = explicitId || editingTransaction?.id;
+    if (!idToUpdate || !user) return;
+    
+    const updated = { ...data, id: idToUpdate, user_id: user.id };
+    setTransactions(prev => prev.map(t => t.id === idToUpdate ? updated as Transaction : t));
+    
+    if (!explicitId) {
+      setEditingTransaction(undefined);
+      setIsFormOpen(false);
+    }
+    
+    await supabase.from('transactions').update(updated).eq('id', idToUpdate);
     showToast('Transação atualizada!');
   };
 
@@ -200,7 +203,7 @@ const App: React.FC = () => {
 
   const renderContent = () => {
     switch (activeTab) {
-      case 'dashboard': return <Dashboard transactions={transactions} categories={categories} setActiveTab={setActiveTab} userProfile={userProfile || { id: user.id, email: user.email }} />;
+      case 'dashboard': return <Dashboard transactions={transactions} categories={categories} setActiveTab={setActiveTab} userProfile={userProfile || { id: user.id, email: user.email }} onUpdateTransaction={handleUpdateTransaction} />;
       case 'routines': return <RoutineTracker routines={routines} userProfile={userProfile || { id: user.id, email: user.email }} onAdd={handleAddRoutine} onToggle={handleToggleRoutine} onDelete={handleDeleteRoutine} />;
       case 'income': return <TransactionList type="INCOME" transactions={transactions} categories={categories} onAdd={() => { setFormType('INCOME'); setIsFormOpen(true); }} onEdit={(t) => { setEditingTransaction(t); setFormType('INCOME'); setIsFormOpen(true); }} onDelete={handleDeleteTransaction} />;
       case 'expenses': return <TransactionList type="EXPENSE" transactions={transactions} categories={categories} onAdd={() => { setFormType('EXPENSE'); setIsFormOpen(true); }} onEdit={(t) => { setEditingTransaction(t); setFormType('EXPENSE'); setIsFormOpen(true); }} onDelete={handleDeleteTransaction} />;
@@ -234,7 +237,7 @@ const App: React.FC = () => {
             </div>
          </div>
       )}
-      {isFormOpen && <TransactionForm type={formType} categories={categories} onSubmit={editingTransaction ? handleUpdateTransaction : handleAddTransaction} onClose={() => setIsFormOpen(false)} initialData={editingTransaction} />}
+      {isFormOpen && <TransactionForm type={formType} categories={categories} onSubmit={editingTransaction ? (data) => handleUpdateTransaction(data) : handleAddTransaction} onClose={() => setIsFormOpen(false)} initialData={editingTransaction} />}
     </Layout>
   );
 };
