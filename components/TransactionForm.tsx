@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { X, Calendar, Tag, Check, CreditCard, MoreHorizontal, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
+import { X, Calendar, Tag, Check, CreditCard, MoreHorizontal, CheckCircle2, AlertCircle } from 'lucide-react';
 import { Transaction, Category, TransactionType, ExpenseType, IncomeType, TransactionStatus } from '../types';
 import { PAYMENT_METHODS, ICON_MAP } from '../constants';
 
@@ -11,7 +11,6 @@ interface TransactionFormProps {
   onClose: () => void;
   initialData?: Transaction;
   prefilledDate?: string;
-  isSyncing?: boolean;
 }
 
 const TransactionForm: React.FC<TransactionFormProps> = ({ 
@@ -20,8 +19,7 @@ const TransactionForm: React.FC<TransactionFormProps> = ({
   onSubmit, 
   onClose, 
   initialData, 
-  prefilledDate,
-  isSyncing = false 
+  prefilledDate
 }) => {
   const [description, setDescription] = useState(initialData?.description || '');
   const [amount, setAmount] = useState(initialData?.amount?.toString() || '');
@@ -41,7 +39,7 @@ const TransactionForm: React.FC<TransactionFormProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!description || !amount || !categoryId || isSyncing) return;
+    if (!description || !amount || !categoryId) return;
 
     onSubmit({
       description,
@@ -63,7 +61,7 @@ const TransactionForm: React.FC<TransactionFormProps> = ({
   const borderColor = type === 'INCOME' ? 'border-emerald-100 dark:border-emerald-900/50' : 'border-rose-100 dark:border-rose-900/50';
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center sm:p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center sm:p-4 bg-slate-950/60 backdrop-blur-sm animate-in fade-in duration-200">
       <div 
         className="w-full sm:max-w-lg bg-white dark:bg-slate-900 rounded-t-[2rem] sm:rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col max-h-[90vh] sm:max-h-auto animate-in slide-in-from-bottom duration-300"
         onClick={(e) => e.stopPropagation()}
@@ -253,18 +251,10 @@ const TransactionForm: React.FC<TransactionFormProps> = ({
           {/* Footer Actions */}
           <div className="p-6 pt-2 pb-8 sm:pb-6 bg-white dark:bg-slate-900 border-t border-slate-50 dark:border-slate-800">
              <button
-              disabled={isSyncing}
               type="submit"
-              className={`w-full py-4 text-white text-lg font-bold rounded-2xl shadow-lg transition-all active:scale-[0.98] flex items-center justify-center gap-3 ${bgColor} ${type === 'INCOME' ? 'shadow-emerald-200 dark:shadow-none' : 'shadow-rose-200 dark:shadow-none'} ${isSyncing ? 'opacity-70 cursor-not-allowed' : ''}`}
+              className={`w-full py-4 text-white text-lg font-bold rounded-2xl shadow-lg transition-all active:scale-[0.98] flex items-center justify-center gap-3 ${bgColor} ${type === 'INCOME' ? 'shadow-emerald-200 dark:shadow-none' : 'shadow-rose-200 dark:shadow-none'}`}
             >
-              {isSyncing ? (
-                <>
-                  <Loader2 className="animate-spin" size={20} />
-                  Salvando em Nuvem...
-                </>
-              ) : (
-                <>{initialData ? 'Atualizar Transação' : 'Confirmar Lançamento'}</>
-              )}
+              {initialData ? 'Atualizar Transação' : 'Salvar Lançamento'}
             </button>
           </div>
         </form>

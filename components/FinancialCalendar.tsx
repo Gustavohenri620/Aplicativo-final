@@ -4,16 +4,12 @@ import {
   ChevronLeft, 
   ChevronRight, 
   Calendar as CalendarIcon,
-  ArrowUpCircle,
-  ArrowDownCircle,
-  X,
   CreditCard,
-  Tag,
+  Plus,
   Clock,
   MoreHorizontal,
   CheckCircle2,
-  AlertCircle,
-  Plus
+  AlertCircle
 } from 'lucide-react';
 import { Transaction, Category, TransactionStatus } from '../types';
 import { ICON_MAP } from '../constants';
@@ -65,7 +61,7 @@ const FinancialCalendar: React.FC<FinancialCalendarProps> = ({ transactions, cat
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-black text-slate-800 dark:text-white">Agenda de Pagamentos</h1>
-          <p className="text-slate-500 dark:text-slate-400 font-medium">Controle seu fluxo de caixa e marque o que já foi liquidado.</p>
+          <p className="text-slate-500 dark:text-slate-400 font-medium">Controle seu fluxo de caixa dia após dia.</p>
         </div>
         
         <div className="flex items-center gap-2 bg-white dark:bg-slate-900 p-1.5 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800">
@@ -82,7 +78,6 @@ const FinancialCalendar: React.FC<FinancialCalendarProps> = ({ transactions, cat
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-7 gap-6">
-        {/* Calendário Principal */}
         <div className="lg:col-span-5 bg-white dark:bg-slate-900 rounded-[2.5rem] p-6 sm:p-8 border border-slate-100 dark:border-slate-800 shadow-sm relative overflow-hidden">
           <div className="grid grid-cols-7 gap-1 sm:gap-3 mb-4">
             {['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].map(d => (
@@ -123,29 +118,18 @@ const FinancialCalendar: React.FC<FinancialCalendarProps> = ({ transactions, cat
 
                   {dateObj.currentMonth && dayTrans.length > 0 && (
                     <div className="flex-1 flex flex-col justify-end gap-1 mt-1">
-                       {income > 0 && (
-                         <div className="h-1.5 sm:h-2 w-full bg-emerald-500/20 rounded-full relative overflow-hidden">
-                           <div className="absolute inset-y-0 left-0 bg-emerald-500 rounded-full w-full" />
-                         </div>
-                       )}
-                       {expenses > 0 && (
-                         <div className="h-1.5 sm:h-2 w-full bg-rose-500/20 rounded-full relative overflow-hidden">
-                           <div className="absolute inset-y-0 left-0 bg-rose-500 rounded-full w-full" />
-                         </div>
-                       )}
+                       {income > 0 && <div className="h-1.5 sm:h-2 w-full bg-emerald-500 rounded-full" />}
+                       {expenses > 0 && <div className="h-1.5 sm:h-2 w-full bg-rose-500 rounded-full" />}
                     </div>
                   )}
                   
-                  {isToday && (
-                    <div className="absolute bottom-2 right-2 w-1 h-1 rounded-full bg-indigo-500 animate-ping" />
-                  )}
+                  {isToday && <div className="absolute bottom-2 right-2 w-1 h-1 rounded-full bg-indigo-500 animate-ping" />}
                 </div>
               );
             })}
           </div>
         </div>
 
-        {/* Detalhes do Dia */}
         <div className="lg:col-span-2 flex flex-col gap-6">
            <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] p-6 sm:p-8 border border-slate-100 dark:border-slate-800 shadow-sm h-full flex flex-col">
               <div className="flex items-center justify-between mb-6">
@@ -157,14 +141,13 @@ const FinancialCalendar: React.FC<FinancialCalendarProps> = ({ transactions, cat
                      <h3 className="text-lg font-black text-slate-800 dark:text-white leading-tight">
                        {selectedDay ? selectedDay.toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' }) : 'Selecione'}
                      </h3>
-                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Fluxo de Caixa</p>
+                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Atividades</p>
                    </div>
                  </div>
                  {selectedDay && (
                    <button 
                     onClick={() => onQuickAdd?.(selectedDay.toISOString().split('T')[0])}
                     className="p-2 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-colors shadow-lg active:scale-95"
-                    title="Novo Lançamento"
                    >
                      <Plus size={18} />
                    </button>
@@ -176,7 +159,6 @@ const FinancialCalendar: React.FC<FinancialCalendarProps> = ({ transactions, cat
                   selectedDayTransactions.map(t => {
                     const category = categories.find(c => c.id === t.category_id);
                     const Icon = ICON_MAP[category?.icon || 'MoreHorizontal'] || MoreHorizontal;
-                    const isIncome = t.type === 'INCOME';
                     const isCompleted = t.status === 'COMPLETED';
 
                     return (
@@ -190,14 +172,13 @@ const FinancialCalendar: React.FC<FinancialCalendarProps> = ({ transactions, cat
                                <p className={`text-xs font-black uppercase tracking-tighter truncate ${isCompleted ? 'line-through text-slate-400' : 'text-slate-800 dark:text-white'}`}>
                                  {t.description}
                                </p>
-                               <p className="text-[9px] text-slate-400 font-bold uppercase">{category?.name || 'Outros'}</p>
+                               <p className="text-[9px] text-slate-400 font-bold uppercase">{category?.name}</p>
                              </div>
                            </div>
 
                            <button 
                              onClick={() => onToggleStatus(t.id, t.status)}
                              className={`shrink-0 p-1.5 rounded-lg transition-all ${isCompleted ? 'bg-emerald-500 text-white shadow-lg' : 'bg-slate-100 dark:bg-slate-800 text-slate-400 hover:text-emerald-500'}`}
-                             title={isCompleted ? "Marcar como pendente" : "Marcar como concluído"}
                            >
                              {isCompleted ? <CheckCircle2 size={16} /> : <AlertCircle size={16} />}
                            </button>
@@ -208,54 +189,20 @@ const FinancialCalendar: React.FC<FinancialCalendarProps> = ({ transactions, cat
                                <CreditCard size={10} />
                                <span>{t.payment_method}</span>
                             </div>
-                            <span className={`text-sm font-black ${isIncome ? 'text-emerald-500' : 'text-rose-500'}`}>
-                               {isIncome ? '+' : '-'} R$ {t.amount.toLocaleString('pt-BR')}
+                            <span className={`text-sm font-black ${t.type === 'INCOME' ? 'text-emerald-500' : 'text-rose-500'}`}>
+                               {t.type === 'INCOME' ? '+' : '-'} R$ {t.amount.toLocaleString('pt-BR')}
                             </span>
                          </div>
-                         
-                         {isCompleted && (
-                           <div className="absolute -top-1 -right-1 bg-emerald-500 w-2 h-2 rounded-full shadow-lg" />
-                         )}
                       </div>
                     );
                   })
                 ) : (
                   <div className="flex flex-col items-center justify-center py-16 text-center opacity-30">
                     <Clock size={48} className="text-slate-300 mb-4" />
-                    <p className="text-sm font-bold text-slate-500 italic">
-                      {selectedDay ? "Nenhum lançamento." : "Toque em um dia."}
-                    </p>
+                    <p className="text-sm font-bold text-slate-500 italic">Nenhum lançamento.</p>
                   </div>
                 )}
               </div>
-
-              {selectedDayTransactions.length > 0 && (
-                <div className="mt-6 pt-6 border-t border-slate-100 dark:border-slate-800 space-y-3">
-                   <div className="flex justify-between items-center text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">
-                     <span>Balanço Previsto</span>
-                     <span className={`${
-                       selectedDayTransactions.reduce((acc, t) => acc + (t.type === 'INCOME' ? t.amount : -t.amount), 0) >= 0 
-                       ? 'text-emerald-500' : 'text-rose-500'
-                     }`}>
-                       R$ {selectedDayTransactions.reduce((acc, t) => acc + (t.type === 'INCOME' ? t.amount : -t.amount), 0).toLocaleString('pt-BR')}
-                     </span>
-                   </div>
-                </div>
-              )}
-           </div>
-
-           <div className="bg-indigo-600 p-6 rounded-[2.5rem] shadow-xl shadow-indigo-900/20 text-white relative overflow-hidden group">
-              <div className="absolute -bottom-6 -right-6 opacity-10 group-hover:scale-110 transition-transform">
-                <ArrowUpCircle size={120} />
-              </div>
-              <div className="flex items-center gap-2 mb-2 text-white/70">
-                 <CheckCircle2 size={16} />
-                 <span className="text-[10px] font-black uppercase tracking-widest">Salvamento Automático</span>
-              </div>
-              <h4 className="text-lg font-black mb-3">Tudo sincronizado!</h4>
-              <p className="text-xs font-medium opacity-80 leading-relaxed">
-                Ao clicar no ícone de status, sua atividade financeira é salva automaticamente no servidor.
-              </p>
            </div>
         </div>
       </div>
