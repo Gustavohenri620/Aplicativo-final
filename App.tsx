@@ -113,9 +113,21 @@ const App: React.FC = () => {
   };
 
   const handleLogout = async () => {
-    if (window.confirm('Deseja realmente sair?')) {
-      await supabase.auth.signOut();
-      showToast('Até breve!', 'info');
+    if (window.confirm('Deseja realmente sair da sua conta?')) {
+      try {
+        await supabase.auth.signOut();
+      } catch (err) {
+        console.error("Erro ao deslogar:", err);
+      } finally {
+        // Força a limpeza do estado local para garantir que a UI mude instantaneamente
+        setUser(null);
+        setUserProfile(null);
+        setTransactions([]);
+        setBudgets([]);
+        setRoutines([]);
+        setActiveTab('dashboard');
+        showToast('Até breve!', 'info');
+      }
     }
   };
 
