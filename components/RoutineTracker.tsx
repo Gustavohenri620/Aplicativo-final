@@ -127,6 +127,11 @@ const RoutineTracker: React.FC<RoutineTrackerProps> = ({ routines, userProfile, 
   const totalItems = filteredItems.length;
   const dailyProgress = totalItems > 0 ? (completedItems.length / totalItems) * 100 : 0;
 
+  // Global progress (all tasks + workouts)
+  const globalTotal = routines.length;
+  const globalCompleted = routines.filter(r => r.completed).length;
+  const globalProgress = globalTotal > 0 ? (globalCompleted / globalTotal) * 100 : 0;
+
   const currentXP = routines.filter(r => r.completed).length * 50;
   const level = Math.floor(currentXP / 500) + 1;
   const xpInLevel = currentXP % 500;
@@ -134,12 +139,12 @@ const RoutineTracker: React.FC<RoutineTrackerProps> = ({ routines, userProfile, 
   const streak = 7;
 
   const motivationMessage = useMemo(() => {
-    if (totalItems === 0) return "Crie sua primeira meta verde hoje!";
-    if (dailyProgress === 0) return "Toda grande jornada começa com um pequeno passo.";
-    if (dailyProgress < 50) return "Você está crescendo! Mantenha a consistência.";
-    if (dailyProgress < 100) return "Quase lá! Seu corpo e mente agradecem.";
+    if (globalTotal === 0) return "Crie sua primeira meta verde hoje!";
+    if (globalProgress === 0) return "Toda grande jornada começa com um pequeno passo.";
+    if (globalProgress < 50) return "Você está crescendo! Mantenha a consistência.";
+    if (globalProgress < 100) return "Quase lá! Seu corpo e mente agradecem.";
     return "Dia perfeito! Você floresceu hoje! 🌿";
-  }, [dailyProgress, totalItems]);
+  }, [globalProgress, globalTotal]);
 
   const handleToggle = (id: string, completed: boolean) => {
     if (completed) {
@@ -315,7 +320,7 @@ const RoutineTracker: React.FC<RoutineTrackerProps> = ({ routines, userProfile, 
                       <stop offset="100%" stopColor="#34d399" />
                     </linearGradient>
                     <filter id="glow">
-                      <feGaussianBlur stdDeviation="2.5" result="coloredBlur"/>
+                      <feGaussianBlur stdDeviation="3.5" result="coloredBlur"/>
                       <feMerge>
                         <feMergeNode in="coloredBlur"/>
                         <feMergeNode in="SourceGraphic"/>
@@ -329,14 +334,14 @@ const RoutineTracker: React.FC<RoutineTrackerProps> = ({ routines, userProfile, 
                     stroke="url(#greenGradient)"
                     strokeWidth="10" 
                     strokeDasharray={301.6} 
-                    strokeDashoffset={301.6 - (301.6 * dailyProgress) / 100}
+                    strokeDashoffset={301.6 - (301.6 * globalProgress) / 100}
                     strokeLinecap="round"
-                    style={{ filter: dailyProgress === 100 ? 'url(#glow)' : 'none' }}
+                    style={{ filter: globalProgress === 100 ? 'url(#glow)' : 'none' }}
                   />
                 </svg>
                 <div className="absolute inset-0 flex flex-col items-center justify-center">
                    <span className="text-xl sm:text-2xl font-black text-slate-800 dark:text-white leading-none tracking-tighter">
-                     {Math.round(dailyProgress)}%
+                     {Math.round(globalProgress)}%
                    </span>
                    <span className="text-[8px] font-black text-emerald-500 uppercase tracking-tighter">Meta</span>
                 </div>
@@ -349,19 +354,42 @@ const RoutineTracker: React.FC<RoutineTrackerProps> = ({ routines, userProfile, 
                       <Flame size={12} fill="currentColor" className="animate-pulse" /> {streak} Dias
                    </div>
                 </div>
-                <p className="text-sm font-bold text-slate-500 dark:text-slate-400 mb-4">{motivationMessage}</p>
+                <p className="text-sm font-bold text-slate-500 dark:text-slate-400 mb-6">{motivationMessage}</p>
                 
-                {/* Nova Barra de Progresso Linear Animada */}
-                <div className="w-full max-w-sm mb-4 group/progress">
-                   <div className="flex justify-between items-end mb-1.5 px-0.5">
-                      <span className="text-[9px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-[0.15em]">Progresso do Dia</span>
-                      <span className="text-[10px] font-black text-slate-400">{completedItems.length} de {totalItems} metas</span>
+                {/* Aprimorada Barra de Progresso Linear Animada */}
+                <div className="w-full max-w-sm mb-6 group/progress">
+                   <div className="flex justify-between items-end mb-2.5 px-0.5">
+                      <div className="flex flex-col">
+                        <span className="text-[10px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-[0.15em] leading-tight">Fluxo Diário</span>
+                        <span className="text-[8px] font-bold text-slate-400 uppercase tracking-wider">Concluído hoje</span>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-[11px] font-black text-slate-600 dark:text-slate-300 tracking-tighter">{globalCompleted} <span className="text-slate-400 font-bold">/ {globalTotal}</span></span>
+                      </div>
                    </div>
-                   <div className="h-2.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden p-0.5 shadow-inner">
+                   <div className="relative h-4 bg-slate-100 dark:bg-slate-800/50 rounded-full p-1 shadow-inner overflow-hidden border border-slate-200/50 dark:border-slate-700/50">
+                      {/* Shimmer Effect */}
+                      <div className="absolute inset-0 z-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full animate-[shimmer_2.5s_infinite]" />
+                      
                       <div 
-                        className={`h-full rounded-full transition-all duration-1000 ease-out shadow-[0_0_8px_rgba(16,185,129,0.2)] ${dailyProgress === 100 ? 'bg-gradient-to-r from-emerald-400 to-emerald-600 animate-pulse' : 'bg-emerald-500'}`} 
-                        style={{ width: `${dailyProgress}%` }} 
-                      />
+                        className={`relative h-full rounded-full transition-all duration-1000 ease-[cubic-bezier(0.34,1.56,0.64,1)] shadow-[0_0_12px_rgba(16,185,129,0.3)] z-10 overflow-hidden ${globalProgress === 100 ? 'bg-gradient-to-r from-emerald-400 via-emerald-500 to-emerald-600 animate-pulse' : 'bg-gradient-to-r from-emerald-500 to-emerald-400'}`} 
+                        style={{ width: `${globalProgress}%` }} 
+                      >
+                         {/* Shine on top of the fill */}
+                         <div className="absolute inset-0 bg-gradient-to-b from-white/20 to-transparent" />
+                      </div>
+                   </div>
+                   
+                   {/* Sub-tab progress indicators */}
+                   <div className="mt-3 flex items-center justify-between gap-4 px-1">
+                      <div className="flex items-center gap-1.5">
+                         <div className={`w-1.5 h-1.5 rounded-full ${activeSubTab === 'TASK' ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-700'}`} />
+                         <span className="text-[8px] font-black text-slate-500 uppercase tracking-tighter">Missões: {routines.filter(r => r.type === 'TASK' && r.completed).length}/{routines.filter(r => r.type === 'TASK').length}</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                         <div className={`w-1.5 h-1.5 rounded-full ${activeSubTab === 'WORKOUT' ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-700'}`} />
+                         <span className="text-[8px] font-black text-slate-500 uppercase tracking-tighter">Treinos: {routines.filter(r => r.type === 'WORKOUT' && r.completed).length}/{routines.filter(r => r.type === 'WORKOUT').length}</span>
+                      </div>
                    </div>
                 </div>
 
