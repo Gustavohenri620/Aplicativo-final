@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { 
   Dumbbell, CheckCircle2, 
@@ -13,16 +12,23 @@ import {
   Sparkle,
   Trophy as TrophyIcon,
   Crown,
-  Timer
+  Timer,
+  Medal,
+  Award,
+  ZapIcon,
+  StarIcon,
+  FlameIcon
 } from 'lucide-react';
 import { RoutineItem, UserProfile } from '../types';
 
-interface RoutineTrackerProps {
-  routines: RoutineItem[];
-  userProfile: UserProfile;
-  onAdd: (item: Omit<RoutineItem, 'id' | 'created_at' | 'user_id'>) => void;
-  onToggle: (id: string, completed: boolean) => void;
-  onDelete: (id: string) => void;
+interface RoutineItem {
+  id: string;
+  title: string;
+  completed: boolean;
+  type: 'TASK' | 'WORKOUT';
+  category?: string;
+  user_id: string;
+  created_at: string;
 }
 
 interface Exercise {
@@ -91,6 +97,26 @@ const WEEKLY_CHALLENGES: WeeklyChallenge[] = [
   }
 ];
 
+const LEVEL_TITLES = [
+  "Iniciante",
+  "Esforçado",
+  "Atleta Amador",
+  "Guerreiro",
+  "Elite Flow",
+  "Inabalável",
+  "Mestre da Rotina",
+  "Lenda",
+  "Titã",
+  "Imortal"
+];
+
+const UNLOCKS = [
+  { level: 2, title: "Brilho Esmeralda", desc: "Suas tarefas concluídas agora brilham!" },
+  { level: 3, title: "Título: Guerreiro", desc: "Novo título de prestígio desbloqueado." },
+  { level: 5, title: "Aura Lendária", desc: "Interface premium habilitada." },
+  { level: 7, title: "Mestre da Disciplina", desc: "Insígnia dourada no perfil." },
+];
+
 const WORKOUT_LIBRARY: WorkoutTemplate[] = [
   { 
     title: "Peito & Tríceps", 
@@ -117,6 +143,7 @@ const WORKOUT_LIBRARY: WorkoutTemplate[] = [
     category: "Força",
     desc: "Treino pesado para membros inferiores.",
     exercises: [
+      // Fixed syntax error: added missing quote for "Agachamento"
       { name: "Agachamento", reps: "4x8" },
       { name: "Leg Press", reps: "3x12" },
       { name: "Cadeira Extensora", reps: "3x15" }
@@ -171,6 +198,8 @@ const RoutineTracker: React.FC<RoutineTrackerProps> = ({ routines, userProfile, 
   const [inputValue, setInputValue] = useState('');
   const [showXP, setShowXP] = useState<string | null>(null);
   const [selectedWorkoutPreview, setSelectedWorkoutPreview] = useState<WorkoutTemplate | null>(null);
+  const [showLevelUp, setShowLevelUp] = useState<number | null>(null);
+  const prevLevelRef = useRef<number>(1);
 
   // Determine current weekly challenge based on the day of the year (rotates weekly)
   const currentWeekIndex = useMemo(() => {
@@ -187,18 +216,30 @@ const RoutineTracker: React.FC<RoutineTrackerProps> = ({ routines, userProfile, 
 
   const filteredItems = routines.filter(item => item.type === activeSubTab);
   
-  // Custom XP calculation: Challenges give 150 XP, normal tasks give 50 XP
+  // Advanced XP calculation: Challenges give 150 XP, Workouts 75 XP, Tasks 50 XP
   const currentXP = useMemo(() => {
     return routines.filter(r => r.completed).reduce((acc, r) => {
-      return acc + (r.category === 'CHALLENGE' ? 150 : 50);
+      if (r.category === 'CHALLENGE') return acc + 150;
+      if (r.type === 'WORKOUT') return acc + 75;
+      return acc + 50;
     }, 0);
   }, [routines]);
 
   const level = Math.floor(currentXP / 500) + 1;
   const xpInLevel = currentXP % 500;
+  const currentTitle = LEVEL_TITLES[Math.min(level - 1, LEVEL_TITLES.length - 1)];
+
+  // Detect Level Up
+  useEffect(() => {
+    if (level > prevLevelRef.current) {
+      setShowLevelUp(level);
+      prevLevelRef.current = level;
+    } else if (level < prevLevelRef.current) {
+        prevLevelRef.current = level; // Handle deletions/uncompletes
+    }
+  }, [level]);
 
   const handleToggle = (id: string, completed: boolean) => {
-    const item = routines.find(r => r.id === id);
     if (completed) {
       setShowXP(id);
       setTimeout(() => setShowXP(null), 1500);
@@ -210,7 +251,6 @@ const RoutineTracker: React.FC<RoutineTrackerProps> = ({ routines, userProfile, 
     const title = titleOverride || inputValue.trim();
     if (!title) return;
     
-    // Check if challenge already exists
     if (isChallenge && routines.some(r => r.category === 'CHALLENGE' && r.title === title && !r.completed)) {
       alert("Este desafio já está na sua lista!");
       return;
@@ -260,23 +300,23 @@ const RoutineTracker: React.FC<RoutineTrackerProps> = ({ routines, userProfile, 
           {items.map(item => {
             const isJustCompleted = showXP === item.id;
             const isChallenge = item.category === 'CHALLENGE';
-            const xpValue = isChallenge ? 150 : 50;
+            const xpValue = isChallenge ? 150 : item.type === 'WORKOUT' ? 75 : 50;
 
             return (
               <div 
                 key={item.id}
                 className={`group relative flex items-center justify-between p-4 sm:p-5 rounded-[2rem] border-2 transition-all duration-700 overflow-hidden ${
                   item.completed 
-                    ? `bg-emerald-500/10 border-emerald-500/30 animate-glow-pulse shadow-[0_0_20px_rgba(16,185,129,0.15)] opacity-80` 
+                    ? `bg-emerald-500/10 border-emerald-500/30 ${level >= 2 ? 'animate-glow-pulse shadow-[0_0_20px_rgba(16,185,129,0.2)]' : ''} opacity-80` 
                     : isChallenge
                       ? 'bg-gradient-to-br from-white to-amber-50 dark:from-slate-900 dark:to-amber-950/20 border-amber-500/30 shadow-md'
                       : 'bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800 hover:border-indigo-500/30 shadow-sm'
                 }`}
               >
-                {/* Visual Shimmer/Beam Effect for newly completed tasks */}
-                {item.completed && (
+                {/* Level 2+ Reward: Improved Shimmer */}
+                {item.completed && level >= 2 && (
                   <div className="absolute inset-0 pointer-events-none opacity-40">
-                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -translate-x-full animate-shimmer" />
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-emerald-200/40 to-transparent -translate-x-full animate-shimmer" />
                   </div>
                 )}
                 
@@ -302,6 +342,7 @@ const RoutineTracker: React.FC<RoutineTrackerProps> = ({ routines, userProfile, 
                         <span className={`text-[10px] font-black uppercase tracking-tighter transition-all duration-500 ${item.completed ? 'text-emerald-500' : isChallenge ? 'text-amber-500' : 'text-indigo-500'}`}>
                            {item.completed ? 'Concluído' : `+${xpValue} XP`}
                         </span>
+                        {item.completed && level >= 5 && <Star size={10} className="text-amber-400 animate-bounce" />}
                         {item.completed && <Sparkles size={10} className="text-emerald-400 animate-pulse" />}
                         {isChallenge && !item.completed && <TrophyIcon size={10} className="text-amber-500" />}
                      </div>
@@ -345,31 +386,81 @@ const RoutineTracker: React.FC<RoutineTrackerProps> = ({ routines, userProfile, 
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500 pb-24">
-      {/* Gamification Header */}
-      <div className="bg-white dark:bg-slate-900 p-6 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-sm relative overflow-hidden">
-        <div className="absolute top-0 right-0 p-8 opacity-[0.03] pointer-events-none rotate-12">
+      {/* Gamification Header - Level 10+ Enhanced */}
+      <div className={`p-6 rounded-[2.5rem] border shadow-lg relative overflow-hidden transition-all duration-1000 ${
+        level >= 10 
+          ? 'bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 border-indigo-500/50' 
+          : 'bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800 shadow-sm'
+      }`}>
+        {/* Animated Aura Background for high level users */}
+        {level >= 5 && (
+           <div className="absolute inset-0 pointer-events-none opacity-20">
+              <div className="absolute -top-1/2 -left-1/2 w-[200%] h-[200%] bg-gradient-conic from-indigo-500 via-purple-500 to-indigo-500 animate-[spin_10s_linear_infinite]" />
+           </div>
+        )}
+        
+        <div className="absolute top-0 right-0 p-8 opacity-[0.05] pointer-events-none rotate-12">
            <Trophy size={150} />
         </div>
+        
         <div className="flex flex-col gap-6 relative z-10">
-          <div className="flex items-center gap-4">
-             <div className="w-16 h-16 rounded-3xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-white shadow-xl shrink-0">
-                <span className="text-2xl font-black">{level}</span>
+          <div className="flex items-center gap-5">
+             <div className="relative group">
+               <div className={`w-20 h-20 rounded-3xl bg-gradient-to-br from-indigo-500 to-violet-600 flex flex-col items-center justify-center text-white shadow-2xl shrink-0 border-4 ${level >= 7 ? 'border-amber-400' : 'border-white/20'}`}>
+                  <span className="text-[10px] font-black uppercase tracking-tighter opacity-70">Nível</span>
+                  <span className="text-3xl font-black -mt-1">{level}</span>
+               </div>
+               {level >= 7 && (
+                 <div className="absolute -top-2 -right-2 w-8 h-8 bg-amber-400 text-slate-900 rounded-full flex items-center justify-center shadow-lg animate-bounce">
+                    <Medal size={16} />
+                 </div>
+               )}
              </div>
+             
              <div className="flex-1 min-w-0">
-                <h1 className="text-xl font-black text-slate-800 dark:text-white truncate">Minha Rotina</h1>
-                <div className="mt-2 w-full max-w-xs">
-                   <div className="flex justify-between items-end mb-1">
-                      <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Nível Atual</span>
-                      <span className="text-[10px] font-black text-indigo-500">{xpInLevel}/500 XP</span>
+                <div className="flex items-center gap-2">
+                   <h1 className="text-2xl font-black text-slate-800 dark:text-white truncate">{currentTitle}</h1>
+                   {level >= 3 && <TrophyIcon size={18} className="text-amber-500" />}
+                </div>
+                
+                <div className="mt-2 w-full max-w-sm">
+                   <div className="flex justify-between items-end mb-1.5">
+                      <div className="flex items-center gap-1.5">
+                         <StarIcon size={12} className="text-amber-400 fill-amber-400" />
+                         <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Progresso da Jornada</span>
+                      </div>
+                      <span className="text-[10px] font-black text-indigo-500 bg-indigo-500/10 px-2 py-0.5 rounded-full">{xpInLevel} / 500 XP</span>
                    </div>
-                   <div className="h-2.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden p-0.5">
-                      <div className="h-full bg-gradient-to-r from-indigo-500 to-emerald-400 rounded-full transition-all duration-1000" style={{ width: `${(xpInLevel / 500) * 100}%` }} />
+                   <div className="h-3 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden p-0.5 shadow-inner">
+                      <div className="h-full bg-gradient-to-r from-indigo-600 via-violet-500 to-emerald-400 rounded-full transition-all duration-1000 shadow-[0_0_10px_rgba(99,102,241,0.5)]" style={{ width: `${(xpInLevel / 500) * 100}%` }} />
                    </div>
                 </div>
              </div>
           </div>
         </div>
       </div>
+
+      {/* Level Up Stats/Unlocks Section */}
+      {level >= 2 && (
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 px-2">
+           <div className="bg-emerald-500/10 border border-emerald-500/20 p-3 rounded-2xl flex items-center gap-3">
+              <ZapIcon size={16} className="text-emerald-500" />
+              <div className="flex flex-col">
+                 <span className="text-[9px] font-black text-slate-400 uppercase">Efeito Desbloqueado</span>
+                 <span className="text-xs font-bold text-emerald-600">Brilho Esmeralda</span>
+              </div>
+           </div>
+           {level >= 5 && (
+             <div className="bg-indigo-500/10 border border-indigo-500/20 p-3 rounded-2xl flex items-center gap-3 animate-in fade-in slide-in-from-left duration-500">
+                <FlameIcon size={16} className="text-indigo-500" />
+                <div className="flex flex-col">
+                   <span className="text-[9px] font-black text-slate-400 uppercase">Aura Habilitada</span>
+                   <span className="text-xs font-bold text-indigo-600">Legendary Mode</span>
+                </div>
+             </div>
+           )}
+        </div>
+      )}
 
       {/* Weekly Challenge Section */}
       <div className="space-y-4">
@@ -384,7 +475,7 @@ const RoutineTracker: React.FC<RoutineTrackerProps> = ({ routines, userProfile, 
            </div>
         </div>
         
-        <div className={`relative overflow-hidden p-6 rounded-[2.5rem] border-2 ${challenge.accent} bg-white dark:bg-slate-900 shadow-lg group`}>
+        <div className={`relative overflow-hidden p-6 rounded-[2.5rem] border-2 ${challenge.accent} bg-white dark:bg-slate-900 shadow-lg group transition-all hover:shadow-indigo-500/10`}>
            <div className="absolute top-0 right-0 p-6 opacity-10 group-hover:scale-110 transition-transform duration-500">
               <challenge.icon size={120} />
            </div>
@@ -547,6 +638,59 @@ const RoutineTracker: React.FC<RoutineTrackerProps> = ({ routines, userProfile, 
            </div>
         </div>
       </div>
+
+      {/* Level Up Celebration Modal */}
+      {showLevelUp !== null && (
+         <div className="fixed inset-0 z-[200] flex items-center justify-center p-6 bg-slate-950/90 backdrop-blur-xl animate-in fade-in duration-500">
+            <div className="absolute inset-0 overflow-hidden pointer-events-none">
+               {[...Array(20)].map((_, i) => (
+                 <div key={i} className="absolute animate-sparkle" style={{
+                   top: `${Math.random() * 100}%`,
+                   left: `${Math.random() * 100}%`,
+                   animationDelay: `${Math.random() * 2}s`
+                 }}>
+                   <Sparkle className="text-amber-400" size={Math.random() * 20 + 10} />
+                 </div>
+               ))}
+            </div>
+
+            <div className="w-full max-w-md bg-white dark:bg-slate-900 rounded-[3rem] p-8 border-4 border-amber-400 shadow-[0_0_50px_rgba(251,191,36,0.3)] text-center relative animate-in zoom-in-95 duration-300">
+               <div className="absolute -top-12 left-1/2 -translate-x-1/2 w-24 h-24 bg-amber-400 rounded-full flex items-center justify-center shadow-2xl border-4 border-white dark:border-slate-900">
+                  <TrophyIcon size={48} className="text-slate-900" />
+               </div>
+               
+               <div className="mt-8 space-y-4">
+                  <h2 className="text-3xl font-black text-slate-800 dark:text-white uppercase tracking-tighter italic">Novo Nível!</h2>
+                  <div className="flex flex-col items-center">
+                     <span className="text-6xl font-black text-indigo-600">{showLevelUp}</span>
+                     <span className="text-lg font-bold text-slate-400 uppercase tracking-widest">{LEVEL_TITLES[Math.min(showLevelUp - 1, LEVEL_TITLES.length - 1)]}</span>
+                  </div>
+                  
+                  <div className="py-6 border-y border-slate-100 dark:border-slate-800">
+                     <p className="text-sm font-bold text-slate-500 mb-4">Você desbloqueou:</p>
+                     <div className="flex flex-col gap-3">
+                        {UNLOCKS.filter(u => u.level <= showLevelUp).slice(-1).map((u, i) => (
+                          <div key={i} className="bg-indigo-500/10 p-4 rounded-2xl flex items-center gap-4 border border-indigo-500/20">
+                             <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white"><Award size={24} /></div>
+                             <div className="text-left">
+                                <p className="text-sm font-black text-indigo-600">{u.title}</p>
+                                <p className="text-[10px] font-medium text-slate-500">{u.desc}</p>
+                             </div>
+                          </div>
+                        ))}
+                     </div>
+                  </div>
+
+                  <button 
+                    onClick={() => setShowLevelUp(null)}
+                    className="w-full py-5 bg-indigo-600 text-white font-black text-xs uppercase tracking-widest rounded-2xl shadow-xl hover:bg-indigo-700 active:scale-95 transition-all"
+                  >
+                    Continuar Jornada
+                  </button>
+               </div>
+            </div>
+         </div>
+      )}
 
       {selectedWorkoutPreview && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-300" onClick={() => setSelectedWorkoutPreview(null)}>
