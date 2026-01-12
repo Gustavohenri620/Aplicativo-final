@@ -30,7 +30,15 @@ import {
   Ghost,
   Diamond,
   Zap as ZapBolt,
-  Award
+  Award,
+  Zap as ZapIconLucide,
+  Timer,
+  Droplets,
+  ZapOff,
+  Dumbbell as StrengthIcon,
+  Timer as CardioIcon,
+  Waves as WaterIcon,
+  Brain as MindIcon
 } from 'lucide-react';
 import { RoutineItem, UserProfile } from '../types';
 
@@ -45,6 +53,72 @@ interface WorkoutTemplate {
   desc: string;
   exercises: Exercise[];
 }
+
+interface WeeklyChallenge {
+  id: string;
+  title: string;
+  theme: string;
+  icon: any;
+  color: string;
+  bgGradient: string;
+  bonusXp: number;
+  tasks: { title: string; required: number; icon: any }[];
+}
+
+const WEEKLY_CHALLENGES: WeeklyChallenge[] = [
+  {
+    id: 'cardio_week',
+    title: 'Vulcão de Cardio',
+    theme: 'Explosão e Resistência',
+    icon: CardioIcon,
+    color: 'text-rose-500',
+    bgGradient: 'from-rose-600 to-orange-500',
+    bonusXp: 1000,
+    tasks: [
+      { title: 'Treinos de HIIT', required: 3, icon: ZapIconLucide },
+      { title: 'Caminhadas 30min', required: 5, icon: Timer }
+    ]
+  },
+  {
+    id: 'strength_week',
+    title: 'Titã de Força',
+    theme: 'Poder e Hipertrofia',
+    icon: StrengthIcon,
+    color: 'text-amber-500',
+    bgGradient: 'from-amber-600 to-yellow-500',
+    bonusXp: 1200,
+    tasks: [
+      { title: 'Treinos de Carga', required: 4, icon: Layers },
+      { title: 'Bater Meta de Proteína', required: 7, icon: Utensils }
+    ]
+  },
+  {
+    id: 'hydration_week',
+    title: 'Fonte de Vida',
+    theme: 'Saúde e Hidratação',
+    icon: WaterIcon,
+    color: 'text-blue-500',
+    bgGradient: 'from-blue-600 to-indigo-500',
+    bonusXp: 800,
+    tasks: [
+      { title: 'Beber 3L de Água', required: 7, icon: Droplets },
+      { title: 'Evitar Ultraprocessados', required: 7, icon: Apple }
+    ]
+  },
+  {
+    id: 'mind_week',
+    title: 'Mente Blindada',
+    theme: 'Foco e Calma',
+    icon: MindIcon,
+    color: 'text-purple-500',
+    bgGradient: 'from-purple-600 to-pink-500',
+    bonusXp: 1000,
+    tasks: [
+      { title: 'Meditação Guiada', required: 5, icon: Brain },
+      { title: 'Leitura Noturna', required: 5, icon: Book }
+    ]
+  }
+];
 
 const WORKOUT_LIBRARY: WorkoutTemplate[] = [
   { 
@@ -151,14 +225,23 @@ const RoutineTracker: React.FC<RoutineTrackerProps> = ({ routines, userProfile, 
   const [selectedWorkoutPreview, setSelectedWorkoutPreview] = useState<WorkoutTemplate | null>(null);
   const [currentCalendarDate, setCurrentCalendarDate] = useState(new Date());
   const [showLevelUp, setShowLevelUp] = useState(false);
+  
+  // Rotating Challenge Logic (based on current week of year)
+  const currentChallenge = useMemo(() => {
+    const now = new Date();
+    const startOfYear = new Date(now.getFullYear(), 0, 1);
+    const dayOfYear = Math.floor((now.getTime() - startOfYear.getTime()) / (1000 * 60 * 60 * 24));
+    const weekNum = Math.floor(dayOfYear / 7);
+    return WEEKLY_CHALLENGES[weekNum % WEEKLY_CHALLENGES.length];
+  }, []);
 
   // XP & Level Logic
   const totalCompleted = routines.filter(r => r.completed).length;
-  // Let's assume some base XP from a real historical tracking, but for now derive from current routines
-  // We'll add a multiplier for Workouts
   const currentXP = routines.reduce((acc, r) => {
     if (!r.completed) return acc;
-    return acc + (r.type === 'WORKOUT' ? 100 : 50);
+    // Check if this task belongs to a challenge theme for extra bonus (simplified logic)
+    const isChallengeTask = currentChallenge.tasks.some(ct => r.title.toLowerCase().includes(ct.title.toLowerCase().split(' ')[0]));
+    return acc + (r.type === 'WORKOUT' ? 100 : 50) + (isChallengeTask ? 50 : 0);
   }, 0);
 
   const XP_PER_LEVEL = 500;
@@ -170,14 +253,11 @@ const RoutineTracker: React.FC<RoutineTrackerProps> = ({ routines, userProfile, 
     return [...RANKS].reverse().find(r => level >= r.level) || RANKS[0];
   }, [level]);
 
-  // Streak simulation (could be calculated from historical routine completion dates)
   const streak = 7;
-
   const filteredItems = routines.filter(item => item.type === activeSubTab);
   const completedItems = filteredItems.filter(item => item.completed);
   const totalItems = filteredItems.length;
-  const dailyProgress = totalItems > 0 ? (completedItems.length / totalItems) * 100 : 0;
-
+  
   const globalTotal = routines.length;
   const globalCompleted = routines.filter(r => r.completed).length;
   const globalProgress = globalTotal > 0 ? (globalCompleted / globalTotal) * 100 : 0;
@@ -195,9 +275,10 @@ const RoutineTracker: React.FC<RoutineTrackerProps> = ({ routines, userProfile, 
       setCelebratingId(id);
       setTimeout(() => setCelebratingId(null), 1200);
       
-      // Check if this toggle would trigger a level up (simplified)
       const item = routines.find(r => r.id === id);
-      const xpGain = item?.type === 'WORKOUT' ? 100 : 50;
+      const isChallengeTask = currentChallenge.tasks.some(ct => item?.title.toLowerCase().includes(ct.title.toLowerCase().split(' ')[0]));
+      const xpGain = (item?.type === 'WORKOUT' ? 100 : 50) + (isChallengeTask ? 50 : 0);
+      
       if (xpInLevel + xpGain >= XP_PER_LEVEL) {
         setTimeout(() => setShowLevelUp(true), 600);
       }
@@ -230,7 +311,6 @@ const RoutineTracker: React.FC<RoutineTrackerProps> = ({ routines, userProfile, 
     };
   }, [filteredItems]);
 
-  // Fix: Group workout library by category to resolve "Cannot find name 'groupedLibrary'" error on lines 749 and 750
   const groupedLibrary = useMemo(() => {
     return WORKOUT_LIBRARY.reduce((acc, workout) => {
       if (!acc[workout.category]) {
@@ -241,7 +321,6 @@ const RoutineTracker: React.FC<RoutineTrackerProps> = ({ routines, userProfile, 
     }, {} as Record<string, WorkoutTemplate[]>);
   }, []);
 
-  // Calendar Logic
   const calendarDays = useMemo(() => {
     const year = currentCalendarDate.getFullYear();
     const month = currentCalendarDate.getMonth();
@@ -292,7 +371,8 @@ const RoutineTracker: React.FC<RoutineTrackerProps> = ({ routines, userProfile, 
         <div className="space-y-3">
           {items.map(item => {
             const isCelebrating = celebratingId === item.id;
-            const itemXP = item.type === 'WORKOUT' ? 100 : 50;
+            const isChallengeTask = currentChallenge.tasks.some(ct => item.title.toLowerCase().includes(ct.title.toLowerCase().split(' ')[0]));
+            const itemXP = (item.type === 'WORKOUT' ? 100 : 50) + (isChallengeTask ? 50 : 0);
             
             return (
               <div key={item.id} className={`group relative flex flex-col sm:flex-row sm:items-center justify-between p-4 sm:p-5 rounded-[2rem] border-2 transition-all duration-300 ${item.completed ? 'bg-emerald-500/5 border-emerald-500/10 opacity-80' : 'bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800 hover:border-emerald-500/30 shadow-sm'}`}>
@@ -322,12 +402,19 @@ const RoutineTracker: React.FC<RoutineTrackerProps> = ({ routines, userProfile, 
                    </div>
 
                    <div className="flex flex-col min-w-0">
-                     <span className={`font-bold text-base sm:text-lg truncate transition-all duration-500 ${item.completed ? 'line-through text-slate-400 italic' : 'text-slate-800 dark:text-white'}`}>
-                       {item.title}
-                     </span>
+                     <div className="flex items-center gap-2">
+                        <span className={`font-bold text-base sm:text-lg truncate transition-all duration-500 ${item.completed ? 'line-through text-slate-400 italic' : 'text-slate-800 dark:text-white'}`}>
+                          {item.title}
+                        </span>
+                        {isChallengeTask && !item.completed && (
+                          <div className="shrink-0 flex items-center gap-1 px-1.5 py-0.5 bg-indigo-500/10 text-indigo-500 rounded-full text-[8px] font-black uppercase tracking-tighter border border-indigo-500/20">
+                            <Zap size={8} fill="currentColor" /> Desafio
+                          </div>
+                        )}
+                     </div>
                      <div className="flex items-center gap-1.5">
                        <span className={`text-[9px] font-black uppercase tracking-tighter transition-colors ${item.completed ? 'text-emerald-500' : 'text-slate-400'}`}>
-                         +{itemXP} XP
+                         +{itemXP} XP {isChallengeTask && <span className="text-indigo-400 font-black">(BÔNUS!)</span>}
                        </span>
                        {item.completed && (
                          <div className="flex items-center text-[8px] font-bold text-emerald-400 bg-emerald-400/10 px-1.5 py-0.5 rounded-full animate-in slide-in-from-left-1 duration-300">
@@ -456,7 +543,6 @@ const RoutineTracker: React.FC<RoutineTrackerProps> = ({ routines, userProfile, 
   const EvolutionView = () => (
     <div className="space-y-8 animate-in fade-in duration-500">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-         {/* Rank Info */}
          <div className="bg-white dark:bg-slate-900 p-8 rounded-[3rem] border border-slate-100 dark:border-slate-800 shadow-sm flex flex-col items-center text-center">
             <div className={`w-24 h-24 ${currentRank.bg} ${currentRank.color} rounded-[2rem] flex items-center justify-center mb-6 shadow-xl`}>
                <currentRank.icon size={48} />
@@ -481,7 +567,6 @@ const RoutineTracker: React.FC<RoutineTrackerProps> = ({ routines, userProfile, 
             </div>
          </div>
 
-         {/* Badges / Trophy Room */}
          <div className="bg-white dark:bg-slate-900 p-8 rounded-[3rem] border border-slate-100 dark:border-slate-800 shadow-sm">
             <div className="flex items-center gap-3 mb-8">
                <Award className="text-amber-500" />
@@ -489,7 +574,7 @@ const RoutineTracker: React.FC<RoutineTrackerProps> = ({ routines, userProfile, 
             </div>
             <div className="grid grid-cols-3 sm:grid-cols-5 gap-4">
                {BADGES.map((badge) => {
-                 const isUnlocked = level >= 2; // For demo, unlock all above level 2
+                 const isUnlocked = level >= 2;
                  return (
                    <div key={badge.id} className={`flex flex-col items-center gap-2 p-3 rounded-2xl transition-all ${isUnlocked ? 'bg-slate-50 dark:bg-slate-800 group cursor-help' : 'opacity-30 grayscale'}`}>
                       <span className="text-3xl filter drop-shadow-md group-hover:scale-125 transition-transform">{badge.emoji}</span>
@@ -501,7 +586,6 @@ const RoutineTracker: React.FC<RoutineTrackerProps> = ({ routines, userProfile, 
          </div>
       </div>
 
-      {/* Leveling Path */}
       <div className="bg-white dark:bg-slate-900 p-8 rounded-[3rem] border border-slate-100 dark:border-slate-800 shadow-sm overflow-hidden">
          <h3 className="text-lg font-black text-slate-800 dark:text-white uppercase tracking-widest mb-8 flex items-center gap-3">
             <TrendingUp className="text-emerald-500" /> Trilha de Evolução
@@ -585,7 +669,6 @@ const RoutineTracker: React.FC<RoutineTrackerProps> = ({ routines, userProfile, 
                 </div>
                 <p className="text-sm font-bold text-slate-500 dark:text-slate-400 mb-6">{motivationMessage}</p>
                 
-                {/* Aprimorada Barra de Progresso Linear Animada */}
                 <div className="w-full max-w-sm mb-6 group/progress">
                    <div className="flex justify-between items-end mb-2.5 px-0.5">
                       <div className="flex flex-col">
@@ -598,7 +681,6 @@ const RoutineTracker: React.FC<RoutineTrackerProps> = ({ routines, userProfile, 
                    </div>
                    <div className="relative h-4 bg-slate-100 dark:bg-slate-800/50 rounded-full p-1 shadow-inner overflow-hidden border border-slate-200/50 dark:border-slate-700/50">
                       <div className="absolute inset-0 z-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full animate-[shimmer_2.5s_infinite]" />
-                      
                       <div 
                         className={`relative h-full rounded-full transition-all duration-1000 ease-[cubic-bezier(0.34,1.56,0.64,1)] shadow-[0_0_12px_rgba(16,185,129,0.3)] z-10 overflow-hidden ${globalProgress === 100 ? 'bg-gradient-to-r from-emerald-400 via-emerald-500 to-emerald-600 animate-pulse' : 'bg-gradient-to-r from-emerald-500 to-emerald-400'}`} 
                         style={{ width: `${globalProgress}%` }} 
@@ -645,6 +727,72 @@ const RoutineTracker: React.FC<RoutineTrackerProps> = ({ routines, userProfile, 
                    <ArrowRight size={14} className="text-white mt-2 group-hover:translate-x-1 transition-transform" />
                 </div>
              </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Weekly Challenges Section - New Feature */}
+      <div className="animate-in slide-in-from-top-4 duration-700">
+        <div className={`relative p-6 sm:p-8 rounded-[3rem] bg-gradient-to-br ${currentChallenge.bgGradient} overflow-hidden shadow-2xl shadow-indigo-900/10 group`}>
+          <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:scale-125 transition-transform duration-1000">
+            <currentChallenge.icon size={180} />
+          </div>
+          
+          <div className="relative z-10 flex flex-col md:flex-row items-center gap-8">
+            <div className="shrink-0">
+               <div className="w-24 h-24 bg-white/20 backdrop-blur-md rounded-[2rem] flex items-center justify-center text-white shadow-lg border border-white/30 animate-pulse">
+                  <currentChallenge.icon size={48} />
+               </div>
+            </div>
+            
+            <div className="flex-1 text-center md:text-left">
+               <div className="flex flex-col md:flex-row items-center gap-3 mb-2">
+                 <span className="px-3 py-1 bg-white/20 backdrop-blur-sm text-white text-[10px] font-black uppercase tracking-widest rounded-full border border-white/20">Desafio da Semana</span>
+                 <span className="text-white/70 text-xs font-bold">{currentChallenge.theme}</span>
+               </div>
+               <h2 className="text-3xl font-black text-white uppercase tracking-tighter mb-4">{currentChallenge.title}</h2>
+               
+               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {currentChallenge.tasks.map((task, idx) => {
+                    // Logic to find matches in current routines
+                    const matches = routines.filter(r => r.title.toLowerCase().includes(task.title.toLowerCase().split(' ')[0]));
+                    const completedMatches = matches.filter(r => r.completed).length;
+                    const progress = Math.min(100, (completedMatches / task.required) * 100);
+
+                    return (
+                      <div key={idx} className="bg-white/10 backdrop-blur-sm p-4 rounded-2xl border border-white/10 group/task hover:bg-white/15 transition-all">
+                        <div className="flex items-center justify-between mb-2">
+                           <div className="flex items-center gap-3">
+                              <div className="p-2 bg-white/20 rounded-lg text-white">
+                                 <task.icon size={14} />
+                              </div>
+                              <span className="text-xs font-black text-white uppercase tracking-tight">{task.title}</span>
+                           </div>
+                           <span className="text-[10px] font-black text-white/80">{completedMatches} / {task.required}</span>
+                        </div>
+                        <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
+                           <div 
+                            className="h-full bg-white rounded-full transition-all duration-1000 ease-out shadow-[0_0_8px_rgba(255,255,255,0.5)]" 
+                            style={{ width: `${progress}%` }}
+                           />
+                        </div>
+                      </div>
+                    );
+                  })}
+               </div>
+            </div>
+            
+            <div className="shrink-0 flex flex-col items-center justify-center p-6 bg-white/10 backdrop-blur-md rounded-[2.5rem] border border-white/20">
+               <span className="text-[10px] font-black text-white/70 uppercase tracking-[0.2em] mb-1">Recompensa Lendária</span>
+               <div className="text-center">
+                  <span className="text-3xl font-black text-white">+{currentChallenge.bonusXp}</span>
+                  <span className="text-xs font-black text-white ml-1">XP</span>
+               </div>
+               <div className="mt-4 flex -space-x-1">
+                 <div className="w-8 h-8 rounded-full bg-amber-400 flex items-center justify-center text-white border-2 border-white/30 shadow-lg"><Star size={14} fill="currentColor" /></div>
+                 <div className="w-8 h-8 rounded-full bg-indigo-400 flex items-center justify-center text-white border-2 border-white/30 shadow-lg"><Trophy size={14} fill="currentColor" /></div>
+               </div>
+            </div>
           </div>
         </div>
       </div>
@@ -707,6 +855,14 @@ const RoutineTracker: React.FC<RoutineTrackerProps> = ({ routines, userProfile, 
                 <div className="flex flex-col gap-2">
                   <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">Sugestões Rápidas:</span>
                   <div className="flex gap-2 overflow-x-auto no-scrollbar pb-2 px-1">
+                    {/* Add Current Challenge Tasks to suggestions */}
+                    {currentChallenge.tasks.map((task, i) => (
+                      <button key={`challenge-${i}`} onClick={() => handleAddItem(task.title)} className="flex items-center gap-2 px-5 py-3 bg-indigo-500/5 dark:bg-indigo-500/10 border border-indigo-500/30 rounded-2xl shadow-sm hover:border-indigo-500 active:scale-95 transition-all shrink-0 group">
+                        <task.icon size={16} className="text-indigo-500 group-hover:scale-110 transition-transform" />
+                        <span className="text-xs font-black text-indigo-600 dark:text-indigo-400 whitespace-nowrap">{task.title}</span>
+                        <div className="px-1.5 py-0.5 bg-indigo-500 text-white rounded-md text-[7px] font-black uppercase">Desafio</div>
+                      </button>
+                    ))}
                     {SUGGESTIONS[activeSubTab].map((suggest, i) => (
                         <button key={i} onClick={() => handleAddItem(suggest.title, suggest.period)} className="flex items-center gap-2 px-5 py-3 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl shadow-sm hover:border-emerald-500 active:scale-95 transition-all shrink-0 group">
                           <suggest.icon size={16} className={`${suggest.color} group-hover:scale-110 transition-transform`} /><span className="text-xs font-bold text-slate-600 dark:text-slate-300 whitespace-nowrap">{suggest.title}</span>
@@ -730,7 +886,7 @@ const RoutineTracker: React.FC<RoutineTrackerProps> = ({ routines, userProfile, 
                       <Leaf size={40} className="animate-pulse" />
                     </div>
                     <h4 className="text-lg font-black text-slate-400 uppercase tracking-tighter">Plante seus hábitos.</h4>
-                    <p className="text-sm text-slate-400 max-w-[200px] mt-2 font-medium leading-relaxed">Sua rotina define o seu success. Adicione uma meta para começar!</p>
+                    <p className="text-sm text-slate-400 max-w-[200px] mt-2 font-medium leading-relaxed">Sua rotina define o seu sucesso. Adicione uma meta para começar!</p>
                   </div>
                 )}
              </div>
@@ -804,10 +960,8 @@ const RoutineTracker: React.FC<RoutineTrackerProps> = ({ routines, userProfile, 
       </div>
       )}
 
-      {/* Level Up Celebration Modal */}
       {showLevelUp && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center bg-emerald-950/90 backdrop-blur-xl animate-in fade-in duration-500 overflow-hidden">
-           {/* Particles simulation (CSS) */}
            <div className="absolute inset-0 pointer-events-none">
              {[...Array(20)].map((_, i) => (
                <div 
@@ -848,7 +1002,6 @@ const RoutineTracker: React.FC<RoutineTrackerProps> = ({ routines, userProfile, 
         </div>
       )}
 
-      {/* Workout Modal */}
       {selectedWorkoutPreview && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-300" onClick={() => setSelectedWorkoutPreview(null)}>
            <div className="w-full max-w-lg bg-white dark:bg-slate-900 rounded-[3rem] shadow-2xl overflow-hidden flex flex-col max-h-[85vh] animate-in zoom-in-95 duration-300" onClick={(e) => e.stopPropagation()}>
