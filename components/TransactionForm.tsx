@@ -1,7 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-// Fix: Add missing CheckCircle2 and AlertCircle imports from lucide-react
-import { X, Calendar, Tag, Check, CreditCard, MoreHorizontal, CheckCircle2, AlertCircle } from 'lucide-react';
+import { X, Calendar, Tag, Check, CreditCard, MoreHorizontal, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
 import { Transaction, Category, TransactionType, ExpenseType, IncomeType, TransactionStatus } from '../types';
 import { PAYMENT_METHODS, ICON_MAP } from '../constants';
 
@@ -12,9 +11,18 @@ interface TransactionFormProps {
   onClose: () => void;
   initialData?: Transaction;
   prefilledDate?: string;
+  isSyncing?: boolean;
 }
 
-const TransactionForm: React.FC<TransactionFormProps> = ({ type, categories, onSubmit, onClose, initialData, prefilledDate }) => {
+const TransactionForm: React.FC<TransactionFormProps> = ({ 
+  type, 
+  categories, 
+  onSubmit, 
+  onClose, 
+  initialData, 
+  prefilledDate,
+  isSyncing = false 
+}) => {
   const [description, setDescription] = useState(initialData?.description || '');
   const [amount, setAmount] = useState(initialData?.amount?.toString() || '');
   const [date, setDate] = useState(initialData?.date || prefilledDate || new Date().toISOString().split('T')[0]);
@@ -33,7 +41,7 @@ const TransactionForm: React.FC<TransactionFormProps> = ({ type, categories, onS
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!description || !amount || !categoryId) return;
+    if (!description || !amount || !categoryId || isSyncing) return;
 
     onSubmit({
       description,
@@ -47,7 +55,6 @@ const TransactionForm: React.FC<TransactionFormProps> = ({ type, categories, onS
       recurring,
       status,
     });
-    onClose();
   };
 
   const themeColor = type === 'INCOME' ? 'text-emerald-600' : 'text-rose-600';
@@ -246,10 +253,18 @@ const TransactionForm: React.FC<TransactionFormProps> = ({ type, categories, onS
           {/* Footer Actions */}
           <div className="p-6 pt-2 pb-8 sm:pb-6 bg-white dark:bg-slate-900 border-t border-slate-50 dark:border-slate-800">
              <button
+              disabled={isSyncing}
               type="submit"
-              className={`w-full py-4 text-white text-lg font-bold rounded-2xl shadow-lg transition-transform active:scale-[0.98] ${bgColor} ${type === 'INCOME' ? 'shadow-emerald-200 dark:shadow-none' : 'shadow-rose-200 dark:shadow-none'}`}
+              className={`w-full py-4 text-white text-lg font-bold rounded-2xl shadow-lg transition-all active:scale-[0.98] flex items-center justify-center gap-3 ${bgColor} ${type === 'INCOME' ? 'shadow-emerald-200 dark:shadow-none' : 'shadow-rose-200 dark:shadow-none'} ${isSyncing ? 'opacity-70 cursor-not-allowed' : ''}`}
             >
-              {initialData ? 'Atualizar Transação' : 'Confirmar Lançamento'}
+              {isSyncing ? (
+                <>
+                  <Loader2 className="animate-spin" size={20} />
+                  Salvando em Nuvem...
+                </>
+              ) : (
+                <>{initialData ? 'Atualizar Transação' : 'Confirmar Lançamento'}</>
+              )}
             </button>
           </div>
         </form>

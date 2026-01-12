@@ -113,7 +113,7 @@ const App: React.FC = () => {
     setUserProfile(updatedProfile);
     const { error } = await supabase.from('profiles').upsert(updatedProfile);
     setIsSyncing(false);
-    if (!error) showToast('Perfil salvo automaticamente!');
+    if (!error) showToast('Perfil atualizado automaticamente!');
     else showToast('Erro ao sincronizar perfil', 'error');
   };
 
@@ -280,7 +280,7 @@ const App: React.FC = () => {
             </div>
          </div>
       )}
-      {isFormOpen && <TransactionForm type={formType} categories={categories} onSubmit={editingTransaction ? handleUpdateTransaction : handleAddTransaction} onClose={() => setIsFormOpen(false)} initialData={editingTransaction} prefilledDate={prefilledDate} />}
+      {isFormOpen && <TransactionForm type={formType} categories={categories} onSubmit={editingTransaction ? handleUpdateTransaction : handleAddTransaction} onClose={() => setIsFormOpen(false)} initialData={editingTransaction} prefilledDate={prefilledDate} isSyncing={isSyncing} />}
     </Layout>
   );
 };
