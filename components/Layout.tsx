@@ -13,7 +13,8 @@ import {
   Tags,
   Target,
   LogOut,
-  CalendarDays
+  CalendarDays,
+  Phone
 } from 'lucide-react';
 import { UserProfile } from '../types';
 
@@ -23,7 +24,7 @@ interface LayoutProps {
   setActiveTab: (tab: string) => void;
   onAddClick: () => void;
   userProfile: UserProfile;
-  onUpdateProfile: (name: string, photo: string, goal: string) => void;
+  onUpdateProfile: (name: string, photo: string, goal: string, whatsapp: string) => void;
   onLogout: () => void;
 }
 
@@ -41,6 +42,7 @@ const Layout: React.FC<LayoutProps> = ({
   const [tempName, setTempName] = useState('');
   const [tempPhoto, setTempPhoto] = useState('');
   const [tempGoal, setTempGoal] = useState('');
+  const [tempWhatsapp, setTempWhatsapp] = useState('');
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   
@@ -60,12 +62,13 @@ const Layout: React.FC<LayoutProps> = ({
     setTempName(rawName);
     setTempPhoto(userProfile.avatar_url || '');
     setTempGoal(userProfile.financial_goal || '');
+    setTempWhatsapp(userProfile.whatsapp_number || '');
     setIsProfileModalOpen(true);
   };
 
   const handleSaveProfile = (e: React.FormEvent) => {
     e.preventDefault();
-    onUpdateProfile(tempName, tempPhoto, tempGoal);
+    onUpdateProfile(tempName, tempPhoto, tempGoal, tempWhatsapp);
     setIsProfileModalOpen(false);
   };
 
@@ -142,7 +145,7 @@ const Layout: React.FC<LayoutProps> = ({
            <div className="lg:hidden w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white">
              <CalendarDays size={20} />
            </div>
-           <h1 className="text-lg font-black text-white tracking-tight">FinanceFlow</h1>
+           <h1 className="text-lg font-black text-white tracking-tight">Finance&Routine</h1>
         </div>
         
         <button 
@@ -284,6 +287,21 @@ const Layout: React.FC<LayoutProps> = ({
                     className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border-none rounded-xl focus:ring-2 focus:ring-indigo-500 text-slate-800 dark:text-white outline-none placeholder:text-slate-400 font-medium"
                     placeholder="Ex: Viagem para Europa, Comprar Carro..."
                   />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-bold text-slate-700 dark:text-slate-300 flex items-center gap-2">
+                    <Phone size={14} className="text-emerald-500" />
+                    WhatsApp (DDI + DDD + Número)
+                  </label>
+                  <input
+                    type="tel"
+                    value={tempWhatsapp}
+                    onChange={(e) => setTempWhatsapp(e.target.value)}
+                    className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border-none rounded-xl focus:ring-2 focus:ring-indigo-500 text-slate-800 dark:text-white outline-none placeholder:text-slate-400 font-medium"
+                    placeholder="Ex: 5511999999999"
+                  />
+                  <p className="text-[10px] text-slate-500 font-medium">* Necessário para enviar lembretes de rotina.</p>
                 </div>
               </div>
 

@@ -40,6 +40,7 @@ export interface UserProfile {
   full_name?: string;
   avatar_url?: string;
   financial_goal?: string;
+  whatsapp_number?: string;
 }
 
 export interface RoutineItem {

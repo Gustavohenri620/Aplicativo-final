@@ -1,6 +1,6 @@
 {
-  "name": "Finanças Familia Galegos",
-  "description": "",
+  "name": "Finance&Routine",
+  "description": "Controle financeiro e gestão de rotinas diárias",
   "requestFramePermissions": [
     "camera"
   ]

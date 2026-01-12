@@ -51,8 +51,8 @@ const Auth: React.FC = () => {
           <div className="w-20 h-20 bg-indigo-600 rounded-3xl flex items-center justify-center text-white mb-6 shadow-2xl shadow-indigo-900/40 transform -rotate-6">
              <ArrowUpCircle size={48} strokeWidth={2.5} />
           </div>
-          <h1 className="text-3xl font-black text-white mb-2">FinanceFlow</h1>
-          <p className="text-slate-400 text-center font-medium">Controle total da sua vida financeira.</p>
+          <h1 className="text-3xl font-black text-white mb-2">Finance&Routine</h1>
+          <p className="text-slate-400 text-center font-medium">Controle total da sua vida financeira e pessoal.</p>
         </div>
 
         {/* Auth Card */}
