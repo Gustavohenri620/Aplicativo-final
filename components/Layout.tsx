@@ -54,7 +54,6 @@ const Layout: React.FC<LayoutProps> = ({
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   
-  // Sincronizar estados temporários quando o modal abrir
   useEffect(() => {
     if (isProfileModalOpen) {
       setTempName(userProfile.full_name || '');
@@ -88,7 +87,7 @@ const Layout: React.FC<LayoutProps> = ({
       await onUpdateProfile(tempName, tempPhoto, tempGoal, tempWhatsapp);
       setIsProfileModalOpen(false);
     } catch (err) {
-      console.error("Falha ao salvar perfil no Layout:", err);
+      console.error("Erro ao salvar perfil:", err);
     }
   };
 
@@ -100,22 +99,21 @@ const Layout: React.FC<LayoutProps> = ({
     reader.onload = (event) => {
       const img = new Image();
       img.onload = () => {
-        // Lógica de redimensionamento para suportar qualquer tamanho de arquivo
         const canvas = document.createElement('canvas');
-        const MAX_WIDTH = 1024;
-        const MAX_HEIGHT = 1024;
+        // Redimensionamento otimizado para avatar (400px é perfeito para UI)
+        const MAX_SIZE = 400; 
         let width = img.width;
         let height = img.height;
 
         if (width > height) {
-          if (width > MAX_WIDTH) {
-            height *= MAX_WIDTH / width;
-            width = MAX_WIDTH;
+          if (width > MAX_SIZE) {
+            height *= MAX_SIZE / width;
+            width = MAX_SIZE;
           }
         } else {
-          if (height > MAX_HEIGHT) {
-            width *= MAX_HEIGHT / height;
-            height = MAX_HEIGHT;
+          if (height > MAX_SIZE) {
+            width *= MAX_SIZE / height;
+            height = MAX_SIZE;
           }
         }
 
@@ -123,9 +121,11 @@ const Layout: React.FC<LayoutProps> = ({
         canvas.height = height;
         const ctx = canvas.getContext('2d');
         if (ctx) {
+          ctx.imageSmoothingEnabled = true;
+          ctx.imageSmoothingQuality = 'high';
           ctx.drawImage(img, 0, 0, width, height);
-          // Converte para JPEG com compressão para garantir que caiba no banco de dados sem erro
-          const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+          // Reduz o peso da string Base64 drasticamente mantendo qualidade
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
           setTempPhoto(dataUrl);
         }
       };
@@ -204,7 +204,7 @@ const Layout: React.FC<LayoutProps> = ({
             {isSyncing ? (
               <div className="flex items-center gap-2">
                 <CloudUpload size={14} className="text-indigo-400 animate-pulse" />
-                <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">Sincronizando...</span>
+                <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">Gravando...</span>
               </div>
             ) : (
               <div className="flex items-center gap-2 group cursor-help">
@@ -213,7 +213,7 @@ const Layout: React.FC<LayoutProps> = ({
                   <CheckCircle2 size={6} className="absolute -bottom-0.5 -right-0.5 text-emerald-300" />
                 </div>
                 <div className="flex flex-col -space-y-0.5">
-                  <span className="text-[10px] font-black text-emerald-500 uppercase tracking-widest leading-none">Conectado</span>
+                  <span className="text-[10px] font-black text-emerald-500 uppercase tracking-widest leading-none">Nuvem OK</span>
                   {lastSyncTime && (
                     <span className="text-[8px] font-bold text-slate-500 lowercase leading-none">às {lastSyncTime}</span>
                   )}
@@ -246,7 +246,7 @@ const Layout: React.FC<LayoutProps> = ({
             onClick={(e) => e.stopPropagation()}
           >
             <div className="px-6 py-4 flex items-center justify-between border-b border-slate-100 dark:border-slate-800">
-              <h2 className="text-lg font-bold text-slate-800 dark:text-white">Editar Perfil</h2>
+              <h2 className="text-lg font-bold text-slate-800 dark:text-white">Meu Perfil</h2>
               <button 
                 onClick={() => !isSyncing && setIsProfileModalOpen(false)} 
                 className="p-2 -mr-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
@@ -262,7 +262,7 @@ const Layout: React.FC<LayoutProps> = ({
                   className={`relative group ${isSyncing ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}
                   onClick={() => !isSyncing && fileInputRef.current?.click()}
                 >
-                  <div className="w-24 h-24 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden border-4 border-slate-50 dark:border-slate-700 shadow-sm">
+                  <div className="w-24 h-24 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden border-4 border-slate-50 dark:border-slate-700 shadow-sm transition-all group-hover:border-indigo-500">
                     {tempPhoto ? (
                       <img src={tempPhoto} alt="Preview" className="w-full h-full object-cover" />
                     ) : (
@@ -283,12 +283,12 @@ const Layout: React.FC<LayoutProps> = ({
                     disabled={isSyncing}
                   />
                 </div>
-                <p className="text-sm text-slate-500 font-medium">Trocar Foto</p>
+                <p className="text-sm text-slate-500 font-bold uppercase tracking-widest text-[10px]">Alterar Foto</p>
               </div>
 
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Seu Nome</label>
+                  <label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Nome Completo</label>
                   <input
                     required
                     disabled={isSyncing}
@@ -296,14 +296,13 @@ const Layout: React.FC<LayoutProps> = ({
                     value={tempName}
                     onChange={(e) => setTempName(e.target.value)}
                     className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 text-slate-800 dark:text-white outline-none placeholder:text-slate-400 font-bold disabled:opacity-50"
-                    placeholder="Ex: Gustavo Henrique"
                   />
                 </div>
 
                 <div className="space-y-2">
                   <label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
                     <Target size={12} className="text-indigo-500" />
-                    Objetivo Principal
+                    Objetivo de Vida
                   </label>
                   <input
                     disabled={isSyncing}
@@ -311,7 +310,6 @@ const Layout: React.FC<LayoutProps> = ({
                     value={tempGoal}
                     onChange={(e) => setTempGoal(e.target.value)}
                     className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 text-slate-800 dark:text-white outline-none placeholder:text-slate-400 font-bold disabled:opacity-50"
-                    placeholder="Ex: Comprar um carro"
                   />
                 </div>
 
@@ -326,34 +324,23 @@ const Layout: React.FC<LayoutProps> = ({
                     value={tempWhatsapp}
                     onChange={(e) => setTempWhatsapp(e.target.value)}
                     className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 text-slate-800 dark:text-white outline-none placeholder:text-slate-400 font-bold disabled:opacity-50"
-                    placeholder="5511999999999"
                   />
                 </div>
               </div>
 
-              <div className="flex flex-col gap-3 pt-4">
-                <div className="flex gap-3">
-                  <button
-                    type="button"
-                    disabled={isSyncing}
-                    onClick={() => setIsProfileModalOpen(false)}
-                    className="flex-1 py-4 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-bold rounded-2xl transition-colors hover:bg-slate-200 dark:hover:bg-slate-700 disabled:opacity-50"
-                  >
-                    Cancelar
-                  </button>
+              <div className="pt-4">
                   <button
                     type="submit"
                     disabled={isSyncing}
-                    className="flex-2 py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-2xl shadow-xl shadow-indigo-600/20 transition-all flex items-center justify-center gap-2 disabled:opacity-70 px-8"
+                    className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-2xl shadow-xl shadow-indigo-600/20 transition-all flex items-center justify-center gap-2 disabled:opacity-70"
                   >
                     {isSyncing ? (
                       <Loader2 size={20} className="animate-spin" />
                     ) : (
                       <CheckCircle2 size={20} />
                     )}
-                    {isSyncing ? 'Sincronizando...' : 'Confirmar e Salvar'}
+                    {isSyncing ? 'Salvando Alterações...' : 'Salvar Perfil'}
                   </button>
-                </div>
               </div>
             </form>
           </div>
