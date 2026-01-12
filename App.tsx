@@ -11,7 +11,7 @@ import FinancialCalendar from './components/FinancialCalendar';
 import Auth from './components/Auth';
 import { Transaction, Category, Budget, TransactionType, UserProfile, RoutineItem, TransactionStatus } from './types';
 import { DEFAULT_CATEGORIES } from './constants';
-import { X, Loader2, CheckCircle2, Trash2, Info, AlertCircle, ArrowUpCircle, ArrowDownCircle } from 'lucide-react';
+import { X, Loader2, CheckCircle2, Trash2, Info, AlertCircle, RefreshCcw } from 'lucide-react';
 import { supabase } from './supabase';
 
 interface Toast {
@@ -35,7 +35,6 @@ const App: React.FC = () => {
   const [routines, setRoutines] = useState<RoutineItem[]>([]);
 
   const [isFormOpen, setIsFormOpen] = useState(false);
-  const [isAddMenuOpen, setIsAddMenuOpen] = useState(false);
   const [formType, setFormType] = useState<TransactionType>('EXPENSE');
   const [editingTransaction, setEditingTransaction] = useState<Transaction | undefined>();
   const [prefilledDate, setPrefilledDate] = useState<string | undefined>();
@@ -55,7 +54,6 @@ const App: React.FC = () => {
     }, 4000);
   }, []);
 
-  // Monitoramento de Autenticação
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       const currentUser = session?.user ?? null;
@@ -119,19 +117,9 @@ const App: React.FC = () => {
   const fetchInitialData = async (userId: string, email: string) => {
     setLoading(true);
     try {
-      // Perfil
-      const { data: profileData, error: profileError } = await supabase.from('profiles').select('*').eq('id', userId).maybeSingle();
-      
-      if (!profileData && !profileError) {
-        // Se o trigger falhou ou atrasou, criamos manualmente para garantir continuidade
-        const newProfile = { id: userId, email: email, full_name: email.split('@')[0], xp: 0 };
-        const { data: upserted } = await supabase.from('profiles').upsert(newProfile).select().single();
-        if (upserted) setUserProfile(upserted);
-      } else if (profileData) {
-        setUserProfile(profileData);
-      }
+      const { data: profileData } = await supabase.from('profiles').select('*').eq('id', userId).maybeSingle();
+      if (profileData) setUserProfile(profileData);
 
-      // Dados em massa
       const [catRes, transRes, budRes, routRes] = await Promise.all([
         supabase.from('categories').select('*').or(`user_id.eq.${userId},user_id.is.null`),
         supabase.from('transactions').select('*').eq('user_id', userId).order('date', { ascending: false }),
@@ -146,30 +134,23 @@ const App: React.FC = () => {
 
       updateSyncStamp();
     } catch (error) {
-      showToast('Erro ao carregar dados da nuvem.', 'error');
+      showToast('Erro ao carregar dados.', 'error');
     } finally {
       setLoading(false);
     }
   };
 
-  // Funções de manipulação com feedback visual
+  // --- HANDLERS FINANCEIROS ---
   const handleAddTransaction = async (data: Omit<Transaction, 'id' | 'user_id'>) => {
     if (!user) return;
     setIsSyncing(true);
-    const newId = crypto.randomUUID();
-    const newT = { ...data, id: newId, user_id: user.id };
-    
-    // Optimistic Update
-    setTransactions(prev => [newT as Transaction, ...prev]);
-    setIsFormOpen(false);
-
     try {
-      const { error } = await supabase.from('transactions').insert(newT);
+      const { error } = await supabase.from('transactions').insert({ ...data, user_id: user.id });
       if (error) throw error;
-      showToast('Transação salva!');
+      showToast('Lançamento salvo!');
+      setIsFormOpen(false);
     } catch (error: any) {
-      setTransactions(prev => prev.filter(t => t.id !== newId));
-      showToast(`Erro ao salvar: ${error.message}`, 'error');
+      showToast('Erro ao salvar transação.', 'error');
     } finally {
       setIsSyncing(false);
     }
@@ -178,20 +159,14 @@ const App: React.FC = () => {
   const handleUpdateTransaction = async (data: Omit<Transaction, 'id' | 'user_id'>) => {
     if (!editingTransaction || !user) return;
     setIsSyncing(true);
-    const updated = { ...data, id: editingTransaction.id, user_id: user.id };
-    
-    setTransactions(prev => prev.map(t => t.id === editingTransaction.id ? updated as Transaction : t));
-    setEditingTransaction(undefined);
-    setIsFormOpen(false);
-
     try {
-      const { error } = await supabase.from('transactions').update(updated).eq('id', editingTransaction.id);
+      const { error } = await supabase.from('transactions').update(data).eq('id', editingTransaction.id);
       if (error) throw error;
       showToast('Transação atualizada!');
+      setEditingTransaction(undefined);
+      setIsFormOpen(false);
     } catch (error: any) {
-      showToast('Erro na atualização.', 'error');
-      // Re-fetch para garantir integridade
-      fetchInitialData(user.id, user.email);
+      showToast('Erro ao atualizar.', 'error');
     } finally {
       setIsSyncing(false);
     }
@@ -201,76 +176,158 @@ const App: React.FC = () => {
     if (!user) return;
     const newStatus: TransactionStatus = currentStatus === 'COMPLETED' ? 'PENDING' : 'COMPLETED';
     setIsSyncing(true);
-    
-    setTransactions(prev => prev.map(t => t.id === id ? { ...t, status: newStatus } : t));
-
     try {
       const { error } = await supabase.from('transactions').update({ status: newStatus }).eq('id', id);
       if (error) throw error;
-      showToast('Status sincronizado!');
+      showToast('Status atualizado!');
     } catch (error) {
-      showToast('Erro ao alterar status.', 'error');
-      setTransactions(prev => prev.map(t => t.id === id ? { ...t, status: currentStatus } : t));
+      showToast('Erro ao mudar status.', 'error');
     } finally {
       setIsSyncing(false);
     }
   };
 
   const handleDeleteTransaction = async (id: string) => {
-    if (!user) return;
-    if (window.confirm('Excluir este registro da nuvem permanentemente?')) {
-      setIsSyncing(true);
-      const original = transactions.find(t => t.id === id);
-      setTransactions(prev => prev.filter(t => t.id !== id));
+    if (!user || !window.confirm('Excluir permanentemente?')) return;
+    setIsSyncing(true);
+    try {
+      const { error } = await supabase.from('transactions').delete().eq('id', id);
+      if (error) throw error;
+      showToast('Registro excluído.', 'delete');
+    } catch (error) {
+      showToast('Erro ao excluir.', 'error');
+    } finally {
+      setIsSyncing(false);
+    }
+  };
 
-      try {
-        const { error } = await supabase.from('transactions').delete().eq('id', id);
-        if (error) throw error;
-        showToast('Registro excluído.', 'delete');
-      } catch (error) {
-        if (original) setTransactions(prev => [original, ...prev]);
-        showToast('Erro ao excluir registro.', 'error');
-      } finally {
-        setIsSyncing(false);
+  // --- HANDLERS DE CATEGORIAS ---
+  const handleSaveCategory = async (data: Omit<Category, 'id'> & { id?: string }) => {
+    if (!user) return;
+    setIsSyncing(true);
+    try {
+      const payload = { ...data, user_id: user.id };
+      const { error } = data.id 
+        ? await supabase.from('categories').update(payload).eq('id', data.id)
+        : await supabase.from('categories').insert(payload);
+      
+      if (error) throw error;
+      showToast('Categoria salva!');
+    } catch (error) {
+      showToast('Erro ao salvar categoria.', 'error');
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  const handleDeleteCategory = async (id: string) => {
+    if (!user || !window.confirm('Excluir esta categoria?')) return;
+    setIsSyncing(true);
+    try {
+      const { error } = await supabase.from('categories').delete().eq('id', id);
+      if (error) throw error;
+      showToast('Categoria removida.');
+    } catch (error) {
+      showToast('Erro: Categoria em uso ou falha na rede.', 'error');
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  // --- HANDLERS DE PLANEJAMENTO ---
+  const handleSaveBudget = async (data: Omit<Budget, 'id' | 'user_id'>) => {
+    if (!user) return;
+    setIsSyncing(true);
+    try {
+      const { error } = await supabase.from('budgets').upsert({
+        ...data,
+        user_id: user.id
+      }, { onConflict: 'user_id,category_id,month,year' });
+      
+      if (error) throw error;
+      showToast('Meta de gastos atualizada!');
+    } catch (error) {
+      showToast('Erro ao salvar meta.', 'error');
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  // --- HANDLERS DE ROTINA ---
+  const handleAddRoutine = async (item: Omit<RoutineItem, 'id' | 'created_at' | 'user_id'>) => {
+    if (!user) return;
+    setIsSyncing(true);
+    try {
+      const { error } = await supabase.from('routines').insert({ ...item, user_id: user.id });
+      if (error) throw error;
+      showToast('Meta adicionada!');
+    } catch (error) {
+      showToast('Erro ao salvar rotina.', 'error');
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  const handleToggleRoutine = async (id: string, completed: boolean) => {
+    if (!user || !userProfile) return;
+    setIsSyncing(true);
+    try {
+      const item = routines.find(r => r.id === id);
+      const { error } = await supabase.from('routines').update({ completed }).eq('id', id);
+      if (error) throw error;
+
+      // Ganho de XP se completar
+      if (completed && item) {
+        const xpGain = item.type === 'WORKOUT' ? 100 : 50;
+        await supabase.from('profiles').update({ xp: (userProfile.xp || 0) + xpGain }).eq('id', user.id);
       }
+    } catch (error) {
+      showToast('Erro ao atualizar progresso.', 'error');
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  const handleDeleteRoutine = async (id: string) => {
+    if (!user) return;
+    setIsSyncing(true);
+    try {
+      const { error } = await supabase.from('routines').delete().eq('id', id);
+      if (error) throw error;
+    } catch (error) {
+      showToast('Erro ao remover meta.', 'error');
+    } finally {
+      setIsSyncing(false);
     }
   };
 
   const handleUpdateProfile = async (name: string, photo: string, goal: string, whatsapp: string) => {
     if (!user) return;
     setIsSyncing(true);
-    const xp = userProfile?.xp || 0;
-    const profileToSave = { id: user.id, email: user.email, full_name: name, avatar_url: photo, financial_goal: goal, whatsapp_number: whatsapp, xp: xp };
-    
     try {
-      const { data, error } = await supabase.from('profiles').upsert(profileToSave).select().single();
+      const { error } = await supabase.from('profiles').update({
+        full_name: name,
+        avatar_url: photo,
+        financial_goal: goal,
+        whatsapp_number: whatsapp
+      }).eq('id', user.id);
       if (error) throw error;
-      setUserProfile(data);
-      showToast('Perfil sincronizado com a nuvem!');
+      showToast('Perfil sincronizado!');
     } catch (error) {
-      showToast('Falha na sincronização do perfil.', 'error');
+      showToast('Erro ao salvar perfil.', 'error');
     } finally {
       setIsSyncing(false);
     }
   };
 
   const handleLogout = async () => {
-    if (window.confirm('Deseja encerrar a sessão?')) {
-      await supabase.auth.signOut();
-      showToast('Sessão encerrada.', 'info');
-    }
+    if (window.confirm('Deseja sair?')) await supabase.auth.signOut();
   };
 
   if (loading) return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-slate-950 text-indigo-500 gap-6">
-      <div className="relative">
-        <Loader2 className="animate-spin" size={64} />
-        <div className="absolute inset-0 blur-3xl bg-indigo-500/10 animate-pulse rounded-full" />
-      </div>
-      <div className="text-center">
-        <span className="text-xs font-black uppercase tracking-[0.4em] block mb-2 text-indigo-400">Security Gateway</span>
-        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest animate-pulse">Estabelecendo túnel seguro...</span>
-      </div>
+      <Loader2 className="animate-spin" size={64} />
+      <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest animate-pulse">Sincronizando Core...</span>
     </div>
   );
 
@@ -280,7 +337,7 @@ const App: React.FC = () => {
     <Layout 
       activeTab={activeTab} 
       setActiveTab={setActiveTab} 
-      onAddClick={() => { setPrefilledDate(undefined); setIsAddMenuOpen(true); }} 
+      onAddClick={() => { setPrefilledDate(undefined); setIsFormOpen(true); }} 
       userProfile={userProfile!} 
       onUpdateProfile={handleUpdateProfile} 
       onLogout={handleLogout}
@@ -288,12 +345,12 @@ const App: React.FC = () => {
       lastSyncTime={lastSyncTime}
     >
       {activeTab === 'dashboard' && <Dashboard transactions={transactions} categories={categories} setActiveTab={setActiveTab} userProfile={userProfile!} />}
-      {activeTab === 'routines' && <RoutineTracker routines={routines} userProfile={userProfile!} onAdd={(i) => {}} onToggle={(id, c) => {}} onDelete={(id) => {}} />}
+      {activeTab === 'routines' && <RoutineTracker routines={routines} userProfile={userProfile!} onAdd={handleAddRoutine} onToggle={handleToggleRoutine} onDelete={handleDeleteRoutine} />}
       {activeTab === 'income' && <TransactionList type="INCOME" transactions={transactions} categories={categories} onAdd={() => { setFormType('INCOME'); setIsFormOpen(true); }} onEdit={(t) => { setEditingTransaction(t); setFormType('INCOME'); setIsFormOpen(true); }} onDelete={handleDeleteTransaction} onToggleStatus={handleToggleTransactionStatus} />}
       {activeTab === 'expenses' && <TransactionList type="EXPENSE" transactions={transactions} categories={categories} onAdd={() => { setFormType('EXPENSE'); setIsFormOpen(true); }} onEdit={(t) => { setEditingTransaction(t); setFormType('EXPENSE'); setIsFormOpen(true); }} onDelete={handleDeleteTransaction} onToggleStatus={handleToggleTransactionStatus} />}
-      {activeTab === 'planning' && <Planning categories={categories} budgets={budgets} transactions={transactions} onSaveBudget={(b) => {}} />}
-      {activeTab === 'categories' && <CategorySettings categories={categories} onSave={(c) => {}} onDelete={(id) => {}} />}
-      {activeTab === 'financial-calendar' && <FinancialCalendar transactions={transactions} categories={categories} onToggleStatus={handleToggleTransactionStatus} />}
+      {activeTab === 'planning' && <Planning categories={categories} budgets={budgets} transactions={transactions} onSaveBudget={handleSaveBudget} />}
+      {activeTab === 'categories' && <CategorySettings categories={categories} onSave={handleSaveCategory} onDelete={handleDeleteCategory} />}
+      {activeTab === 'financial-calendar' && <FinancialCalendar transactions={transactions} categories={categories} onToggleStatus={handleToggleTransactionStatus} onQuickAdd={(d) => { setPrefilledDate(d); setIsFormOpen(true); }} />}
 
       <div className="fixed top-20 right-4 left-4 sm:left-auto sm:right-6 sm:w-80 z-[100] flex flex-col gap-3 pointer-events-none">
         {toasts.map(t => (
@@ -310,7 +367,7 @@ const App: React.FC = () => {
         ))}
       </div>
 
-      {isFormOpen && <TransactionForm type={formType} categories={categories} onSubmit={editingTransaction ? handleUpdateTransaction : handleAddTransaction} onClose={() => setIsFormOpen(false)} initialData={editingTransaction} prefilledDate={prefilledDate} />}
+      {isFormOpen && <TransactionForm type={formType} categories={categories} onSubmit={editingTransaction ? handleUpdateTransaction : handleAddTransaction} onClose={() => { setIsFormOpen(false); setEditingTransaction(undefined); }} initialData={editingTransaction} prefilledDate={prefilledDate} />}
     </Layout>
   );
 };
