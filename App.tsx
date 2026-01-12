@@ -24,6 +24,7 @@ const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [loading, setLoading] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [lastSyncTime, setLastSyncTime] = useState<string | null>(null);
   const [user, setUser] = useState<any>(null);
   const [toasts, setToasts] = useState<Toast[]>([]);
   
@@ -38,6 +39,11 @@ const App: React.FC = () => {
   const [formType, setFormType] = useState<TransactionType>('EXPENSE');
   const [editingTransaction, setEditingTransaction] = useState<Transaction | undefined>();
   const [prefilledDate, setPrefilledDate] = useState<string | undefined>();
+
+  const updateSyncStamp = () => {
+    const now = new Date();
+    setLastSyncTime(now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }));
+  };
 
   const showToast = useCallback((message: string, type: Toast['type'] = 'success') => {
     const id = crypto.randomUUID();
@@ -82,7 +88,7 @@ const App: React.FC = () => {
       const { data: profileData } = await supabase.from('profiles').select('*').eq('id', userId).single();
       if (profileData) setUserProfile(profileData);
       else {
-        const newProfile = { id: userId, email: email, full_name: email.split('@')[0] };
+        const newProfile = { id: userId, email: email, full_name: email.split('@')[0], xp: 0 };
         await supabase.from('profiles').upsert(newProfile);
         setUserProfile(newProfile);
       }
@@ -99,6 +105,7 @@ const App: React.FC = () => {
       const { data: routineData } = await supabase.from('routines').select('*').order('created_at', { ascending: true });
       if (routineData) setRoutines(routineData);
 
+      updateSyncStamp();
     } catch (error) {
       console.error('Erro ao carregar dados:', error);
     } finally {
@@ -109,12 +116,14 @@ const App: React.FC = () => {
   const handleUpdateProfile = async (name: string, photo: string, goal: string, whatsapp: string) => {
     if (!user) return;
     setIsSyncing(true);
-    const updatedProfile = { id: user.id, email: user.email, full_name: name, avatar_url: photo, financial_goal: goal, whatsapp_number: whatsapp };
-    setUserProfile(updatedProfile);
+    const updatedProfile = { ...userProfile, id: user.id, email: user.email, full_name: name, avatar_url: photo, financial_goal: goal, whatsapp_number: whatsapp };
+    setUserProfile(updatedProfile as UserProfile);
     const { error } = await supabase.from('profiles').upsert(updatedProfile);
     setIsSyncing(false);
-    if (!error) showToast('Perfil atualizado automaticamente!');
-    else showToast('Erro ao sincronizar perfil', 'error');
+    if (!error) {
+      updateSyncStamp();
+      showToast('Perfil atualizado automaticamente!');
+    }
   };
 
   const handleLogout = async () => {
@@ -132,15 +141,36 @@ const App: React.FC = () => {
     setRoutines(prev => [...prev, newItem as RoutineItem]);
     const { error } = await supabase.from('routines').insert(newItem);
     setIsSyncing(false);
-    if (!error) showToast(`${item.type === 'TASK' ? 'Tarefa' : 'Treino'} salva automaticamente!`);
+    if (!error) {
+      updateSyncStamp();
+      showToast(`${item.type === 'TASK' ? 'Tarefa' : 'Treino'} salva automaticamente!`);
+    }
   };
 
   const handleToggleRoutine = async (id: string, completed: boolean) => {
+    if (!user || !userProfile) return;
     setIsSyncing(true);
+    
+    const item = routines.find(r => r.id === id);
+    if (!item) return;
+
+    // Calcular ganho de XP (simplificado como no RoutineTracker)
+    const xpGain = completed ? (item.type === 'WORKOUT' ? 100 : 50) : -(item.type === 'WORKOUT' ? 100 : 50);
+    const newXP = Math.max(0, (userProfile.xp || 0) + xpGain);
+
+    // Update Local State Optimistically
     setRoutines(prev => prev.map(r => r.id === id ? { ...r, completed } : r));
-    const { error } = await supabase.from('routines').update({ completed }).eq('id', id);
+    setUserProfile(prev => prev ? { ...prev, xp: newXP } : null);
+
+    // Save to Database
+    const { error: routineError } = await supabase.from('routines').update({ completed }).eq('id', id);
+    const { error: profileError } = await supabase.from('profiles').update({ xp: newXP }).eq('id', user.id);
+    
     setIsSyncing(false);
-    if (!error) showToast(completed ? 'Meta batida! Sincronizado. 🚀' : 'Atualizado automaticamente');
+    if (!routineError && !profileError) {
+      updateSyncStamp();
+      showToast(completed ? 'Meta batida! Sincronizado. 🚀' : 'Atualizado automaticamente');
+    }
   };
 
   const handleDeleteRoutine = async (id: string) => {
@@ -148,7 +178,10 @@ const App: React.FC = () => {
     setRoutines(prev => prev.filter(r => r.id !== id));
     const { error } = await supabase.from('routines').delete().eq('id', id);
     setIsSyncing(false);
-    if (!error) showToast('Removido e sincronizado.', 'delete');
+    if (!error) {
+      updateSyncStamp();
+      showToast('Removido e sincronizado.', 'delete');
+    }
   };
 
   // Finance Actions
@@ -160,7 +193,10 @@ const App: React.FC = () => {
     setIsFormOpen(false);
     const { error } = await supabase.from('transactions').insert(newT);
     setIsSyncing(false);
-    if (!error) showToast('Atividade financeira salva!');
+    if (!error) {
+      updateSyncStamp();
+      showToast('Atividade financeira salva!');
+    }
   };
 
   const handleUpdateTransaction = async (data: Omit<Transaction, 'id' | 'user_id'>) => {
@@ -172,7 +208,10 @@ const App: React.FC = () => {
     setIsFormOpen(false);
     const { error } = await supabase.from('transactions').update(updated).eq('id', editingTransaction.id);
     setIsSyncing(false);
-    if (!error) showToast('Lançamento atualizado e salvo!');
+    if (!error) {
+      updateSyncStamp();
+      showToast('Lançamento atualizado e salvo!');
+    }
   };
 
   const handleToggleTransactionStatus = async (id: string, currentStatus: TransactionStatus) => {
@@ -181,7 +220,10 @@ const App: React.FC = () => {
     setTransactions(prev => prev.map(t => t.id === id ? { ...t, status: newStatus } : t));
     const { error } = await supabase.from('transactions').update({ status: newStatus }).eq('id', id);
     setIsSyncing(false);
-    if (!error) showToast(newStatus === 'COMPLETED' ? 'Concluído e sincronizado! ✅' : 'Status atualizado ⏳');
+    if (!error) {
+      updateSyncStamp();
+      showToast(newStatus === 'COMPLETED' ? 'Concluído e sincronizado! ✅' : 'Status atualizado ⏳');
+    }
   };
 
   const handleDeleteTransaction = async (id: string) => {
@@ -190,6 +232,7 @@ const App: React.FC = () => {
       setTransactions(prev => prev.filter(t => t.id !== id));
       await supabase.from('transactions').delete().eq('id', id);
       setIsSyncing(false);
+      updateSyncStamp();
       showToast('Transação removida permanentemente.', 'delete');
     }
   };
@@ -200,9 +243,12 @@ const App: React.FC = () => {
     const id = catData.id || crypto.randomUUID();
     const newCat = { ...catData, id, user_id: user.id };
     setCategories(prev => catData.id ? prev.map(c => c.id === id ? newCat : c) : [...prev, newCat]);
-    await supabase.from('categories').upsert(newCat);
+    const { error } = await supabase.from('categories').upsert(newCat);
     setIsSyncing(false);
-    showToast('Categoria salva automaticamente!');
+    if (!error) {
+      updateSyncStamp();
+      showToast('Categoria salva automaticamente!');
+    }
   };
 
   const handleDeleteCategory = async (id: string) => {
@@ -211,6 +257,7 @@ const App: React.FC = () => {
       setCategories(p => p.filter(c => c.id !== id));
       await supabase.from('categories').delete().eq('id', id);
       setIsSyncing(false);
+      updateSyncStamp();
       showToast('Categoria removida e sincronizada.', 'delete');
     }
   };
@@ -221,9 +268,12 @@ const App: React.FC = () => {
     const id = crypto.randomUUID();
     const newB = { ...budgetData, id, user_id: user.id };
     setBudgets(prev => [...prev.filter(b => b.category_id !== budgetData.category_id), newB as Budget]);
-    await supabase.from('budgets').upsert(newB);
+    const { error } = await supabase.from('budgets').upsert(newB);
     setIsSyncing(false);
-    showToast('Planejamento salvo e atualizado!');
+    if (!error) {
+      updateSyncStamp();
+      showToast('Planejamento salvo e atualizado!');
+    }
   };
 
   if (loading) return <div className="flex items-center justify-center min-h-screen bg-slate-950 text-indigo-500"><Loader2 className="animate-spin" size={48} /></div>;
@@ -251,6 +301,7 @@ const App: React.FC = () => {
       onUpdateProfile={handleUpdateProfile} 
       onLogout={handleLogout}
       isSyncing={isSyncing}
+      lastSyncTime={lastSyncTime}
     >
       {renderContent()}
       <div className="fixed top-20 right-4 left-4 sm:left-auto sm:right-6 sm:w-80 z-[100] flex flex-col gap-3 pointer-events-none">

@@ -179,7 +179,7 @@ function SeedlingIcon(props: any) {
 const BADGES = [
   { id: 'water', emoji: '💧', name: 'Hidratado', desc: '5 Metas de água', required: 5 },
   { id: 'beast', emoji: '🦁', name: 'Monstro', desc: '10 Treinos concluídos', required: 10 },
-  { id: 'zen', emoji: '🧘', name: 'Zen', desc: '5 Meditações', required: 5 },
+  { id: 'zen', emoji: '🧘', name: 'Zen', desc: '5 Metas de meditação', required: 5 },
   { id: 'early', emoji: '🌅', name: 'Madrugador', desc: '10 Metas matinais', required: 10 },
   { id: 'fire', emoji: '🔥', name: 'Imparável', desc: '7 Dias de streak', required: 7 },
 ];
@@ -235,15 +235,8 @@ const RoutineTracker: React.FC<RoutineTrackerProps> = ({ routines, userProfile, 
     return WEEKLY_CHALLENGES[weekNum % WEEKLY_CHALLENGES.length];
   }, []);
 
-  // XP & Level Logic
-  const totalCompleted = routines.filter(r => r.completed).length;
-  const currentXP = routines.reduce((acc, r) => {
-    if (!r.completed) return acc;
-    // Check if this task belongs to a challenge theme for extra bonus (simplified logic)
-    const isChallengeTask = currentChallenge.tasks.some(ct => r.title.toLowerCase().includes(ct.title.toLowerCase().split(' ')[0]));
-    return acc + (r.type === 'WORKOUT' ? 100 : 50) + (isChallengeTask ? 50 : 0);
-  }, 0);
-
+  // XP & Level Logic - Consome XP persistido do Perfil
+  const currentXP = userProfile?.xp || 0;
   const XP_PER_LEVEL = 500;
   const level = Math.floor(currentXP / XP_PER_LEVEL) + 1;
   const xpInLevel = currentXP % XP_PER_LEVEL;
@@ -253,10 +246,9 @@ const RoutineTracker: React.FC<RoutineTrackerProps> = ({ routines, userProfile, 
     return [...RANKS].reverse().find(r => level >= r.level) || RANKS[0];
   }, [level]);
 
+  // Streak fictícia por enquanto
   const streak = 7;
   const filteredItems = routines.filter(item => item.type === activeSubTab);
-  const completedItems = filteredItems.filter(item => item.completed);
-  const totalItems = filteredItems.length;
   
   const globalTotal = routines.length;
   const globalCompleted = routines.filter(r => r.completed).length;
@@ -276,11 +268,13 @@ const RoutineTracker: React.FC<RoutineTrackerProps> = ({ routines, userProfile, 
       setTimeout(() => setCelebratingId(null), 1200);
       
       const item = routines.find(r => r.id === id);
-      const isChallengeTask = currentChallenge.tasks.some(ct => item?.title.toLowerCase().includes(ct.title.toLowerCase().split(' ')[0]));
-      const xpGain = (item?.type === 'WORKOUT' ? 100 : 50) + (isChallengeTask ? 50 : 0);
-      
-      if (xpInLevel + xpGain >= XP_PER_LEVEL) {
-        setTimeout(() => setShowLevelUp(true), 600);
+      if (item) {
+        const isChallengeTask = currentChallenge.tasks.some(ct => item.title.toLowerCase().includes(ct.title.toLowerCase().split(' ')[0]));
+        const xpGain = (item.type === 'WORKOUT' ? 100 : 50) + (isChallengeTask ? 50 : 0);
+        
+        if (xpInLevel + xpGain >= XP_PER_LEVEL) {
+          setTimeout(() => setShowLevelUp(true), 600);
+        }
       }
     }
     onToggle(id, completed);
@@ -754,7 +748,6 @@ const RoutineTracker: React.FC<RoutineTrackerProps> = ({ routines, userProfile, 
                
                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {currentChallenge.tasks.map((task, idx) => {
-                    // Logic to find matches in current routines
                     const matches = routines.filter(r => r.title.toLowerCase().includes(task.title.toLowerCase().split(' ')[0]));
                     const completedMatches = matches.filter(r => r.completed).length;
                     const progress = Math.min(100, (completedMatches / task.required) * 100);
@@ -855,7 +848,6 @@ const RoutineTracker: React.FC<RoutineTrackerProps> = ({ routines, userProfile, 
                 <div className="flex flex-col gap-2">
                   <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">Sugestões Rápidas:</span>
                   <div className="flex gap-2 overflow-x-auto no-scrollbar pb-2 px-1">
-                    {/* Add Current Challenge Tasks to suggestions */}
                     {currentChallenge.tasks.map((task, i) => (
                       <button key={`challenge-${i}`} onClick={() => handleAddItem(task.title)} className="flex items-center gap-2 px-5 py-3 bg-indigo-500/5 dark:bg-indigo-500/10 border border-indigo-500/30 rounded-2xl shadow-sm hover:border-indigo-500 active:scale-95 transition-all shrink-0 group">
                         <task.icon size={16} className="text-indigo-500 group-hover:scale-110 transition-transform" />
@@ -962,22 +954,6 @@ const RoutineTracker: React.FC<RoutineTrackerProps> = ({ routines, userProfile, 
 
       {showLevelUp && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center bg-emerald-950/90 backdrop-blur-xl animate-in fade-in duration-500 overflow-hidden">
-           <div className="absolute inset-0 pointer-events-none">
-             {[...Array(20)].map((_, i) => (
-               <div 
-                 key={i} 
-                 className="absolute animate-bounce" 
-                 style={{ 
-                   left: `${Math.random() * 100}%`, 
-                   top: `${Math.random() * 100}%`,
-                   animationDelay: `${Math.random() * 2}s`
-                 }}
-               >
-                 <Sparkles className="text-amber-400 opacity-20" size={Math.random() * 40 + 10} />
-               </div>
-             ))}
-           </div>
-           
            <div className="relative text-center p-8 max-w-sm animate-in zoom-in duration-700 flex flex-col items-center">
               <div className="relative mb-12">
                  <div className="absolute inset-0 bg-emerald-500 blur-3xl opacity-20 animate-pulse rounded-full" />

@@ -17,7 +17,8 @@ import {
   Phone,
   CloudLightning,
   CloudOff,
-  CloudUpload
+  CloudUpload,
+  CheckCircle2
 } from 'lucide-react';
 import { UserProfile } from '../types';
 
@@ -30,6 +31,7 @@ interface LayoutProps {
   onUpdateProfile: (name: string, photo: string, goal: string, whatsapp: string) => void;
   onLogout: () => void;
   isSyncing?: boolean;
+  lastSyncTime?: string | null;
 }
 
 const Layout: React.FC<LayoutProps> = ({ 
@@ -40,7 +42,8 @@ const Layout: React.FC<LayoutProps> = ({
   userProfile,
   onUpdateProfile,
   onLogout,
-  isSyncing = false
+  isSyncing = false,
+  lastSyncTime = null
 }) => {
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   
@@ -154,17 +157,25 @@ const Layout: React.FC<LayoutProps> = ({
         </div>
         
         <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-900 rounded-xl border border-slate-800">
+          <div className="flex items-center gap-3 px-3 py-1.5 bg-slate-900 rounded-xl border border-slate-800 shadow-inner">
             {isSyncing ? (
-              <>
+              <div className="flex items-center gap-2">
                 <CloudUpload size={14} className="text-indigo-400 animate-pulse" />
                 <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">Sincronizando...</span>
-              </>
+              </div>
             ) : (
-              <>
-                <CloudLightning size={14} className="text-emerald-500" />
-                <span className="text-[10px] font-black text-emerald-500 uppercase tracking-widest">Salvo em Nuvem</span>
-              </>
+              <div className="flex items-center gap-2 group cursor-help">
+                <div className="relative">
+                  <CloudLightning size={14} className="text-emerald-500" />
+                  <CheckCircle2 size={6} className="absolute -bottom-0.5 -right-0.5 text-emerald-300" />
+                </div>
+                <div className="flex flex-col -space-y-0.5">
+                  <span className="text-[10px] font-black text-emerald-500 uppercase tracking-widest leading-none">Salvo</span>
+                  {lastSyncTime && (
+                    <span className="text-[8px] font-bold text-slate-500 lowercase leading-none">às {lastSyncTime}</span>
+                  )}
+                </div>
+              </div>
             )}
           </div>
           <button 
@@ -172,7 +183,7 @@ const Layout: React.FC<LayoutProps> = ({
             className="flex items-center gap-2 px-3 py-1.5 bg-slate-900 hover:bg-rose-900/20 text-slate-400 hover:text-rose-400 rounded-xl border border-slate-800 hover:border-rose-900/50 transition-all font-bold text-xs"
           >
             <LogOut size={14} />
-            <span>Sair</span>
+            <span className="hidden sm:inline">Sair</span>
           </button>
         </div>
       </header>
@@ -238,7 +249,6 @@ const Layout: React.FC<LayoutProps> = ({
           })}
         </div>
         
-        {/* Footer Credit */}
         <footer className="w-full py-8 px-6 text-center border-t border-slate-900/50 mt-auto">
           <p className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] flex items-center justify-center gap-1.5">
             App desenvolvido e criado por 

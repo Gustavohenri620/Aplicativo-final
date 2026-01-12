@@ -43,6 +43,7 @@ export interface UserProfile {
   avatar_url?: string;
   financial_goal?: string;
   whatsapp_number?: string;
+  xp?: number;
 }
 
 export interface RoutineItem {
