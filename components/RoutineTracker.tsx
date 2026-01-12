@@ -39,47 +39,47 @@ const WORKOUT_LIBRARY: WorkoutTemplate[] = [
     desc: "Treino clássico de empurrar para volume e definição.",
     exercises: [
       { name: "Supino Reto", reps: "4x10", video: "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJ1N2R4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4JmVwPXYxX2ludGVybmFsX2dpZl9ieV9pZCZjdD1n/3o7TKL9Fh3p90E6OJy/giphy.mp4" },
-      { name: "Supino Inclinado Halteres", reps: "3x12", video: "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJ1N2R4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4JmVwPXYxX2ludGVybmFsX2dpZl9ieV9pZCZjdD1n/l41lTfuxS5zP3wD1S/giphy.mp4" },
-      { name: "Crucifixo Máquina", reps: "3x15", video: "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJ1N2R4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4JmVwPXYxX2ludGVybmFsX2dpZl9ieV9pZCZjdD1n/3o7TKtkX7p9m8m7m8M/giphy.mp4" },
-      { name: "Tríceps Pulley Corda", reps: "4x12", video: "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJ1N2R4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4JmVwPXYxX2ludGVybmFsX2dpZl9ieV9pZCZjdD1n/3o7TKVUn7iM8FMEU24/giphy.mp4" }
+      { name: "Supino Inclinado Halteres", reps: "3x12", video: "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJ1N2R4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4JmVwPXYxX2ludGVybmFsX2dpZl9ieV9pZCZjdD1n/l41lTfuxS5zP3wD1S/giphy.mp4" },
+      { name: "Crucifixo Máquina", reps: "3x15", video: "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJ1N2R4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4JmVwPXYxX2ludGVybmFsX2dpZl9ieV9pZCZjdD1n/3o7TKtkX7p9m8m7m8M/giphy.mp4" },
+      { name: "Tríceps Pulley Corda", reps: "4x12", video: "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJ1N2R4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4JmVwPXYxX2ludGVybmFsX2dpZl9ieV9pZCZjdD1n/3o7TKVUn7iM8FMEU24/giphy.mp4" }
     ]
   },
   { 
     title: "Costas & Bíceps (Power Pull)", 
     desc: "Foco em largura das costas e pico do bíceps.",
     exercises: [
-      { name: "Puxada Alta Aberta", reps: "4x10", video: "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJ1N2R4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4JmVwPXYxX2ludGVybmFsX2dpZl9ieV9pZCZjdD1n/l0HlSgH9iO07X97Pi/giphy.mp4" },
-      { name: "Remada Baixa", reps: "3x12", video: "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJ1N2R4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4JmVwPXYxX2ludGVybmFsX2dpZl9ieV9pZCZjdD1n/3o7TKVUn7iM8FMEU24/giphy.mp4" },
-      { name: "Rosca Direta W", reps: "3x10", video: "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJ1N2R4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4JmVwPXYxX2ludGVybmFsX2dpZl9ieV9pZCZjdD1n/l41lWjZk3p3E7z6h2/giphy.mp4" },
-      { name: "Rosca Martelo", reps: "3x12", video: "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJ1N2R4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4JmVwPXYxX2ludGVybmFsX2dpZl9ieV9pZCZjdD1n/3o7TKp7mBvH5Q1iP6w/giphy.mp4" }
+      { name: "Puxada Alta Aberta", reps: "4x10", video: "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJ1N2R4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4JmVwPXYxX2ludGVybmFsX2dpZl9ieV9pZCZjdD1n/l0HlSgH9iO07X97Pi/giphy.mp4" },
+      { name: "Remada Baixa", reps: "3x12", video: "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJ1N2R4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4JmVwPXYxX2ludGVybmFsX2dpZl9ieV9pZCZjdD1n/3o7TKVUn7iM8FMEU24/giphy.mp4" },
+      { name: "Rosca Direta W", reps: "3x10", video: "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJ1N2R4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4JmVwPXYxX2ludGVybmFsX2dpZl9ieV9pZCZjdD1n/l41lWjZk3p3E7z6h2/giphy.mp4" },
+      { name: "Rosca Martelo", reps: "3x12", video: "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJ1N2R4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4JmVwPXYxX2ludGVybmFsX2dpZl9ieV9pZCZjdD1n/3o7TKp7mBvH5Q1iP6w/giphy.mp4" }
     ]
   },
   { 
     title: "Pernas Completo (Base Forte)", 
     desc: "Treino pesado para membros inferiores.",
     exercises: [
-      { name: "Agachamento Livre", reps: "4x8", video: "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJ1N2R4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4JmVwPXYxX2ludGVybmFsX2dpZl9ieV9pZCZjdD1n/l41lTfuxS5zP3wD1S/giphy.mp4" },
-      { name: "Leg Press 45", reps: "3x12", video: "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJ1N2R4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4JmVwPXYxX2ludGVybmFsX2dpZl9ieV9pZCZjdD1n/3o7TKL9Fh3p90E6OJy/giphy.mp4" },
-      { name: "Cadeira Extensora", reps: "3x15", video: "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJ1N2R4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4JmVwPXYxX2ludGVybmFsX2dpZl9ieV9pZCZjdD1n/3o7TKv6eMdwW556d1K/giphy.mp4" },
-      { name: "Mesa Flexora", reps: "3x12", video: "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJ1N2R4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4JmVwPXYxX2ludGVybmFsX2dpZl9ieV9pZCZjdD1n/l0HlSgH9iO07X97Pi/giphy.mp4" }
+      { name: "Agachamento Livre", reps: "4x8", video: "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJ1N2R4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4JmVwPXYxX2ludGVybmFsX2dpZl9ieV9pZCZjdD1n/l41lTfuxS5zP3wD1S/giphy.mp4" },
+      { name: "Leg Press 45", reps: "3x12", video: "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJ1N2R4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4JmVwPXYxX2ludGVybmFsX2dpZl9ieV9pZCZjdD1n/3o7TKL9Fh3p90E6OJy/giphy.mp4" },
+      { name: "Cadeira Extensora", reps: "3x15", video: "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJ1N2R4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4JmVwPXYxX2l_iZCZjdD1n/3o7TKv6eMdwW556d1K/giphy.mp4" },
+      { name: "Mesa Flexora", reps: "3x12", video: "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJ1N2R4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4JmVwPXYxX2ludGVybmFsX2dpZl9ieV9pZCZjdD1n/l0HlSgH9iO07X97Pi/giphy.mp4" }
     ]
   },
   { 
     title: "Ombros & Trapézio", 
     desc: "Volume e largura superior.",
     exercises: [
-      { name: "Desenvolvimento Halter", reps: "4x10", video: "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJ1N2R4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4JmVwPXYxX2ludGVybmFsX2dpZl9ieV9pZCZjdD1n/3o7TKVUn7iM8FMEU24/giphy.mp4" },
-      { name: "Elevação Lateral", reps: "4x15", video: "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJ1N2R4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4JmVwPXYxX2ludGVybmFsX2dpZl9ieV9pZCZjdD1n/3o7TKtkX7p9m8m7m8M/giphy.mp4" },
-      { name: "Encolhimento Barra", reps: "4x15", video: "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJ1N2R4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4JmVwPXYxX2ludGVybmFsX2dpZl9ieV9pZCZjdD1n/l41lWjZk3p3E7z6h2/giphy.mp4" }
+      { name: "Desenvolvimento Halter", reps: "4x10", video: "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJ1N2R4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4JmVwPXYxX2ludGVybmFsX2dpZl9ieV9pZCZjdD1n/3o7TKVUn7iM8FMEU24/giphy.mp4" },
+      { name: "Elevação Lateral", reps: "4x15", video: "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJ1N2R4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4JmVwPXYxX2ludGVybmFsX2dpZl9ieV9pZCZjdD1n/3o7TKtkX7p9m8m7m8M/giphy.mp4" },
+      { name: "Encolhimento Barra", reps: "4x15", video: "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJ1N2R4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4JmVwPXYxX2ludGVybmFsX2dpZl9ieV9pZCZjdD1n/l41lWjZk3p3E7z6h2/giphy.mp4" }
     ]
   },
   { 
     title: "Core & Abdominais", 
     desc: "Estabilidade e definição abdominal.",
     exercises: [
-      { name: "Prancha Abdominal", reps: "3x60s", video: "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJ1N2R4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4JmVwPXYxX2ludGVybmFsX2dpZl9ieV9pZCZjdD1n/3o7TKp7mBvH5Q1iP6w/giphy.mp4" },
-      { name: "Abdominal Supra", reps: "3x25", video: "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJ1N2R4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4JmVwPXYxX2ludGVybmFsX2dpZl9ieV9pZCZjdD1n/l0HlSgH9iO07X97Pi/giphy.mp4" },
-      { name: "Elevação de Pernas", reps: "3x15", video: "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJ1N2R4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4JmVwPXYxX2ludGVybmFsX2dpZl9ieV9pZCZjdD1n/3o7TKtkX7p9m8m7m8M/giphy.mp4" }
+      { name: "Prancha Abdominal", reps: "3x60s", video: "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJ1N2R4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4JmVwPXYxX2ludGVybmFsX2dpZl9ieV9pZCZjdD1n/3o7TKp7mBvH5Q1iP6w/giphy.mp4" },
+      { name: "Abdominal Supra", reps: "3x25", video: "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJ1N2R4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4JmVwPXYxX2ludGVybmFsX2dpZl9ieV9pZCZjdD1n/l0HlSgH9iO07X97Pi/giphy.mp4" },
+      { name: "Elevação de Pernas", reps: "3x15", video: "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJ1N2R4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4Zmx4JmVwPXYxX2ludGVybmFsX2dpZl9ieV9pZCZjdD1n/3o7TKtkX7p9m8m7m8M/giphy.mp4" }
     ]
   }
 ];
@@ -231,47 +231,59 @@ const RoutineTracker: React.FC<RoutineTrackerProps> = ({ routines, onAdd, onTogg
           <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">{title}</h3>
         </div>
         <div className="space-y-3">
-          {items.map(item => (
-            <div 
-              key={item.id}
-              className={`group relative flex items-center justify-between p-4 sm:p-5 rounded-[2rem] border-2 transition-all duration-300 ${
-                item.completed 
-                  ? 'bg-emerald-500/5 border-transparent opacity-60 grayscale-[0.5]' 
-                  : 'bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800 hover:border-indigo-500/30 shadow-sm'
-              }`}
-            >
-              <div className="flex items-center gap-4 flex-1">
-                 <button 
-                   onClick={() => handleToggle(item.id, !item.completed)}
-                   className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all transform active:scale-90 shrink-0 ${
-                     item.completed 
-                       ? 'bg-emerald-500 text-white shadow-lg' 
-                       : 'bg-slate-50 dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 text-transparent'
-                   }`}
-                 >
-                   <CheckCircle2 size={24} className={item.completed ? 'opacity-100' : 'opacity-0'} />
-                 </button>
-                 <div className="flex flex-col min-w-0">
-                   <span className={`font-bold text-base sm:text-lg truncate transition-all ${item.completed ? 'line-through text-slate-400' : 'text-slate-800 dark:text-white'}`}>
-                     {item.title}
-                   </span>
-                   <span className="text-[10px] font-black text-indigo-500 uppercase tracking-tighter">+50 XP</span>
-                 </div>
-              </div>
-              
-              {showXP === item.id && (
-                <div className="absolute left-1/2 -top-4 -translate-x-1/2 animate-bounce pointer-events-none z-20">
-                   <div className="bg-emerald-500 text-white text-[10px] font-black px-3 py-1 rounded-full shadow-lg flex items-center gap-1">
-                      <Sparkles size={10} /> +50 XP
+          {items.map(item => {
+            const isJustCompleted = showXP === item.id;
+            return (
+              <div 
+                key={item.id}
+                className={`group relative flex items-center justify-between p-4 sm:p-5 rounded-[2rem] border-2 transition-all duration-500 overflow-hidden ${
+                  item.completed 
+                    ? `bg-emerald-500/10 border-emerald-500/20 shadow-[0_0_15px_rgba(16,185,129,0.1)] ${isJustCompleted ? 'animate-[pulse_1.5s_ease-in-out_infinite]' : 'opacity-70 grayscale-[0.3]'}` 
+                    : 'bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800 hover:border-indigo-500/30 shadow-sm'
+                }`}
+              >
+                {/* Background Shimmer Effect when completed */}
+                {item.completed && (
+                  <div className="absolute inset-0 pointer-events-none opacity-20">
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-emerald-400 to-transparent -translate-x-full animate-[shimmer_2s_infinite]" />
+                  </div>
+                )}
+
+                <div className="flex items-center gap-4 flex-1 relative z-10">
+                   <button 
+                     onClick={() => handleToggle(item.id, !item.completed)}
+                     className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all transform active:scale-90 shrink-0 ${
+                       item.completed 
+                         ? 'bg-emerald-500 text-white shadow-[0_0_20px_rgba(16,185,129,0.4)] scale-105' 
+                         : 'bg-slate-50 dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 text-transparent hover:border-indigo-400'
+                     }`}
+                   >
+                     <CheckCircle2 size={24} className={`transition-all duration-300 ${item.completed ? 'opacity-100 scale-100' : 'opacity-0 scale-50'}`} />
+                   </button>
+                   <div className="flex flex-col min-w-0">
+                     <span className={`font-bold text-base sm:text-lg truncate transition-all duration-500 ${item.completed ? 'line-through text-emerald-800/60 dark:text-emerald-400/60' : 'text-slate-800 dark:text-white'}`}>
+                       {item.title}
+                     </span>
+                     <span className={`text-[10px] font-black uppercase tracking-tighter transition-all duration-300 ${item.completed ? 'text-emerald-500' : 'text-indigo-500'}`}>
+                        {item.completed ? 'Concluído' : '+50 XP'}
+                     </span>
                    </div>
                 </div>
-              )}
+                
+                {showXP === item.id && (
+                  <div className="absolute left-1/2 -top-4 -translate-x-1/2 animate-bounce pointer-events-none z-20">
+                     <div className="bg-emerald-500 text-white text-[10px] font-black px-3 py-1 rounded-full shadow-lg flex items-center gap-1">
+                        <Sparkles size={10} /> +50 XP
+                     </div>
+                  </div>
+                )}
 
-              <button onClick={() => onDelete(item.id)} className="p-3 text-slate-300 hover:text-rose-500 transition-all opacity-100 sm:opacity-0 sm:group-hover:opacity-100">
-                <Trash2 size={18} />
-              </button>
-            </div>
-          ))}
+                <button onClick={() => onDelete(item.id)} className="p-3 text-slate-300 hover:text-rose-500 transition-all opacity-100 sm:opacity-0 sm:group-hover:opacity-100 relative z-10">
+                  <Trash2 size={18} />
+                </button>
+              </div>
+            );
+          })}
         </div>
       </div>
     );
