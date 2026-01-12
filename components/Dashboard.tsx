@@ -13,7 +13,8 @@ import {
   X, ChevronRight,
   MoreHorizontal,
   CalendarClock,
-  ArrowRightCircle
+  ArrowRightCircle,
+  ShieldCheck
 } from 'lucide-react';
 import { Transaction, Category, UserProfile } from '../types';
 import { ICON_MAP } from '../constants';
@@ -449,7 +450,7 @@ const Dashboard: React.FC<DashboardProps> = ({ transactions, categories, setActi
       )}
 
       {/* ÚLTIMAS DESPESAS (PASSADO) */}
-      <div className="space-y-4">
+      <div className="space-y-4 pb-12">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Clock className="text-indigo-600" size={20} />
@@ -458,7 +459,7 @@ const Dashboard: React.FC<DashboardProps> = ({ transactions, categories, setActi
           <button onClick={() => setActiveTab('expenses')} className="text-sm font-semibold text-indigo-600 dark:text-indigo-400 hover:underline">Ver Histórico</button>
         </div>
 
-        <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-sm overflow-hidden">
+        <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-sm overflow-hidden mb-8">
           <div className="overflow-x-auto no-scrollbar">
             <table className="w-full text-left border-collapse">
               <thead>
@@ -505,6 +506,21 @@ const Dashboard: React.FC<DashboardProps> = ({ transactions, categories, setActi
               </tbody>
             </table>
           </div>
+        </div>
+
+        {/* Footer Credit specific to Initial Page */}
+        <div className="pt-12 pb-8 border-t border-slate-100 dark:border-slate-900 flex flex-col items-center justify-center gap-3 text-center">
+           <div className="flex items-center justify-center w-12 h-12 rounded-2xl bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 text-indigo-500 mb-2">
+              <ShieldCheck size={24} />
+           </div>
+           <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] leading-relaxed">
+             App desenvolvido e criado por
+           </p>
+           <div className="flex items-center gap-2">
+             <span className="text-sm font-black text-slate-800 dark:text-white">Gustavo Henrique de Oliveira</span>
+             <span className="flex items-center justify-center w-5 h-5 rounded-full bg-slate-100 dark:bg-slate-800 text-[10px] font-black text-slate-500 dark:text-slate-400">R</span>
+           </div>
+           <p className="text-[9px] font-bold text-slate-500 opacity-50 uppercase tracking-tighter">Original Product & Design</p>
         </div>
       </div>
     </div>

@@ -208,8 +208,8 @@ const Layout: React.FC<LayoutProps> = ({
         </div>
       </nav>
 
-      <main className="lg:pl-72 pt-16 min-h-screen">
-        <div className="p-4 lg:p-8 max-w-7xl mx-auto pb-24 lg:pb-8">
+      <main className="lg:pl-72 pt-16 min-h-screen flex flex-col">
+        <div className="p-4 lg:p-8 max-w-7xl mx-auto pb-24 lg:pb-8 flex-1 w-full">
           {React.Children.map(children, child => {
              if (React.isValidElement(child)) {
                return React.cloneElement(child as React.ReactElement<any>, { onOpenProfile: handleOpenProfile });
@@ -217,6 +217,15 @@ const Layout: React.FC<LayoutProps> = ({
              return child;
           })}
         </div>
+        
+        {/* Footer Credit */}
+        <footer className="w-full py-8 px-6 text-center border-t border-slate-900/50 mt-auto">
+          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] flex items-center justify-center gap-1.5">
+            App desenvolvido e criado por 
+            <span className="text-indigo-400 font-black">Gustavo Henrique de Oliveira</span> 
+            <span className="text-slate-600">®</span>
+          </p>
+        </footer>
       </main>
 
       {isProfileModalOpen && (
