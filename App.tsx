@@ -1,253 +1,241 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Layout from './components/Layout';
 import Dashboard from './components/Dashboard';
 import TransactionList from './components/TransactionList';
 import TransactionForm from './components/TransactionForm';
 import Planning from './components/Planning';
 import CategorySettings from './components/CategorySettings';
-import Auth from './components/Auth';
-import { Transaction, Category, Budget, TransactionType, UserProfile } from './types';
+import RoutineTracker from './components/RoutineTracker';
+import { Transaction, Category, Budget, TransactionType, UserProfile, RoutineItem, TransactionStatus } from './types';
 import { DEFAULT_CATEGORIES } from './constants';
-import { X, Loader2, ArrowUpCircle, ArrowDownCircle } from 'lucide-react';
-import { supabase } from './supabase';
+import { X, CheckCircle2, Trash2, Info, AlertCircle, Github } from 'lucide-react';
+import { githubService, GitHubSyncData } from './services/githubService';
+
+interface Toast {
+  id: string;
+  message: string;
+  type: 'success' | 'error' | 'info' | 'delete';
+}
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
-  const [loading, setLoading] = useState(true);
-  const [user, setUser] = useState<any>(null);
+  const [toasts, setToasts] = useState<Toast[]>([]);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [githubToken, setGithubToken] = useState(() => localStorage.getItem('github_pat') || '');
   
-  // States
-  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [categories, setCategories] = useState<Category[]>(DEFAULT_CATEGORIES);
-  const [budgets, setBudgets] = useState<Budget[]>([]);
+  // Estado Inicial carregado do LocalStorage
+  const [userProfile, setUserProfile] = useState<UserProfile>(() => {
+    const saved = localStorage.getItem('userProfile');
+    return saved ? JSON.parse(saved) : { id: 'local-user', email: 'user@local', full_name: 'Usuário Local', xp: 0 };
+  });
+
+  const [transactions, setTransactions] = useState<Transaction[]>(() => {
+    const saved = localStorage.getItem('transactions');
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  const [categories, setCategories] = useState<Category[]>(() => {
+    const saved = localStorage.getItem('categories');
+    return saved ? JSON.parse(saved) : DEFAULT_CATEGORIES;
+  });
+
+  const [budgets, setBudgets] = useState<Budget[]>(() => {
+    const saved = localStorage.getItem('budgets');
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  const [routines, setRoutines] = useState<RoutineItem[]>(() => {
+    const saved = localStorage.getItem('routines');
+    return saved ? JSON.parse(saved) : [];
+  });
 
   const [isFormOpen, setIsFormOpen] = useState(false);
-  const [isAddMenuOpen, setIsAddMenuOpen] = useState(false);
   const [formType, setFormType] = useState<TransactionType>('EXPENSE');
   const [editingTransaction, setEditingTransaction] = useState<Transaction | undefined>();
+  const [prefilledDate, setPrefilledDate] = useState<string | undefined>();
 
-  useEffect(() => {
-    document.documentElement.classList.add('dark');
-    
-    // Check initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
-        setUser(session.user);
-        fetchInitialData(session.user.id, session.user.email || '');
-      } else {
-        setLoading(false);
-      }
-    });
+  // Persistência Automática no LocalStorage
+  useEffect(() => localStorage.setItem('userProfile', JSON.stringify(userProfile)), [userProfile]);
+  useEffect(() => localStorage.setItem('transactions', JSON.stringify(transactions)), [transactions]);
+  useEffect(() => localStorage.setItem('categories', JSON.stringify(categories)), [categories]);
+  useEffect(() => localStorage.setItem('budgets', JSON.stringify(budgets)), [budgets]);
+  useEffect(() => localStorage.setItem('routines', JSON.stringify(routines)), [routines]);
 
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      const currentUser = session?.user ?? null;
-      setUser(currentUser);
-      if (currentUser) {
-        fetchInitialData(currentUser.id, currentUser.email || '');
-      } else {
-        setUserProfile(null);
-        setTransactions([]);
-        setBudgets([]);
-        setLoading(false);
-      }
-    });
-
-    return () => subscription.unsubscribe();
+  const showToast = useCallback((message: string, type: Toast['type'] = 'success') => {
+    const id = crypto.randomUUID();
+    setToasts(prev => [...prev, { id, message, type }]);
+    setTimeout(() => {
+      setToasts(prev => prev.filter(t => t.id !== id));
+    }, 4000);
   }, []);
 
-  const fetchInitialData = async (userId: string, email: string) => {
-    setLoading(true);
+  const handleGitHubSync = async (mode: 'PUSH' | 'PULL', tokenOverride?: string) => {
+    const token = tokenOverride || githubToken;
+    if (!token) {
+      showToast('GitHub Token não configurado.', 'error');
+      return;
+    }
+
+    setIsSyncing(true);
     try {
-      // 1. Profile
-      const { data: profileData } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .single();
-      
-      if (profileData) {
-        setUserProfile(profileData);
+      const gist = await githubService.getGist(token);
+      const currentData: GitHubSyncData = { userProfile, transactions, categories, budgets, routines };
+
+      if (mode === 'PUSH') {
+        if (gist) {
+          await githubService.updateGist(token, gist.id, currentData);
+        } else {
+          await githubService.createGist(token, currentData);
+        }
+        showToast('Dados sincronizados com GitHub!');
       } else {
-        // Create profile if it doesn't exist (failsafe)
-        const newProfile = { id: userId, email: email, full_name: email.split('@')[0] };
-        await supabase.from('profiles').upsert(newProfile);
-        setUserProfile(newProfile);
+        if (!gist) {
+          showToast('Nenhum backup encontrado no GitHub.', 'error');
+          return;
+        }
+        const downloaded = await githubService.downloadData(token, gist.id);
+        if (downloaded) {
+          setUserProfile(downloaded.userProfile);
+          setTransactions(downloaded.transactions);
+          setCategories(downloaded.categories);
+          setBudgets(downloaded.budgets);
+          setRoutines(downloaded.routines);
+          showToast('Backup restaurado do GitHub!');
+        }
       }
-
-      // 2. Categories (Globals + User's)
-      const { data: categoriesData } = await supabase
-        .from('categories')
-        .select('*');
-      
-      if (categoriesData) setCategories(categoriesData);
-
-      // 3. Transactions
-      const { data: transactionsData } = await supabase
-        .from('transactions')
-        .select('*')
-        .order('date', { ascending: false });
-      
-      if (transactionsData) setTransactions(transactionsData);
-
-      // 4. Budgets
-      const { data: budgetsData } = await supabase
-        .from('budgets')
-        .select('*');
-      
-      if (budgetsData) setBudgets(budgetsData);
-
     } catch (error) {
-      console.error('Erro ao carregar dados:', error);
+      showToast('Erro na sincronização com GitHub.', 'error');
+      console.error(error);
     } finally {
-      setLoading(false);
+      setIsSyncing(false);
     }
   };
 
-  const handleUpdateProfile = async (name: string, photo: string, goal: string) => {
-    if (!user) return;
-    const updatedProfile = {
-      ...userProfile,
-      id: user.id,
-      email: user.email,
-      full_name: name,
-      avatar_url: photo,
-      financial_goal: goal
-    };
-
-    setUserProfile(updatedProfile);
-    await supabase.from('profiles').upsert(updatedProfile);
+  const handleSaveGitHubToken = (token: string) => {
+    setGithubToken(token);
+    localStorage.setItem('github_pat', token);
+    showToast('Token GitHub salvo!');
   };
 
-  const handleLogout = async () => {
-    if (window.confirm('Deseja realmente sair da sua conta?')) {
-      await supabase.auth.signOut();
-    }
-  };
-
-  const handleAddTransaction = async (data: Omit<Transaction, 'id' | 'user_id'>) => {
-    if (!user) return;
-    const newTransaction = {
-      ...data,
-      id: crypto.randomUUID(),
-      user_id: user.id,
-    };
-
-    setTransactions(prev => [newTransaction as Transaction, ...prev]);
+  // Handlers Locais (Mantendo como solicitado)
+  const handleAddTransaction = (data: Omit<Transaction, 'id' | 'user_id'>) => {
+    const newTransaction: Transaction = { ...data, id: crypto.randomUUID(), user_id: userProfile.id };
+    setTransactions(prev => [newTransaction, ...prev]);
+    showToast('Lançamento salvo!');
     setIsFormOpen(false);
-    await supabase.from('transactions').insert(newTransaction);
   };
 
-  const handleUpdateTransaction = async (data: Omit<Transaction, 'id' | 'user_id'>) => {
-    if (!editingTransaction || !user) return;
-    const updated = { ...data, id: editingTransaction.id, user_id: user.id };
-
-    setTransactions(prev => prev.map(t => t.id === editingTransaction.id ? updated as Transaction : t));
+  const handleUpdateTransaction = (data: Omit<Transaction, 'id' | 'user_id'>) => {
+    if (!editingTransaction) return;
+    setTransactions(prev => prev.map(t => t.id === editingTransaction.id ? { ...data, id: t.id, user_id: t.user_id } : t));
+    showToast('Registro atualizado!');
     setEditingTransaction(undefined);
     setIsFormOpen(false);
-    await supabase.from('transactions').update(updated).eq('id', editingTransaction.id);
   };
 
-  const handleDeleteTransaction = async (id: string) => {
-    if (window.confirm('Excluir transação?')) {
-      setTransactions(prev => prev.filter(t => t.id !== id));
-      await supabase.from('transactions').delete().eq('id', id);
+  const handleToggleTransactionStatus = (id: string, currentStatus: TransactionStatus) => {
+    const newStatus: TransactionStatus = currentStatus === 'COMPLETED' ? 'PENDING' : 'COMPLETED';
+    setTransactions(prev => prev.map(t => t.id === id ? { ...t, status: newStatus } : t));
+  };
+
+  const handleDeleteTransaction = (id: string) => {
+    if (!window.confirm('Excluir permanentemente?')) return;
+    setTransactions(prev => prev.filter(t => t.id !== id));
+    showToast('Registro excluído.', 'delete');
+  };
+
+  const handleSaveCategory = (data: Omit<Category, 'id'> & { id?: string }) => {
+    if (data.id) {
+      setCategories(prev => prev.map(c => c.id === data.id ? { ...data, id: c.id } as Category : c));
+    } else {
+      setCategories(prev => [...prev, { ...data, id: crypto.randomUUID() } as Category]);
+    }
+    showToast('Categoria salva!');
+  };
+
+  const handleDeleteCategory = (id: string) => {
+    if (!window.confirm('Excluir esta categoria?')) return;
+    setCategories(prev => prev.filter(c => c.id !== id));
+    showToast('Categoria removida.');
+  };
+
+  const handleSaveBudget = (data: Omit<Budget, 'id' | 'user_id'>) => {
+    const existingIndex = budgets.findIndex(b => b.category_id === data.category_id && b.month === data.month && b.year === data.year);
+    if (existingIndex > -1) {
+      const newBudgets = [...budgets];
+      newBudgets[existingIndex] = { ...data, id: budgets[existingIndex].id, user_id: userProfile.id };
+      setBudgets(newBudgets);
+    } else {
+      setBudgets(prev => [...prev, { ...data, id: crypto.randomUUID(), user_id: userProfile.id }]);
+    }
+    showToast('Meta atualizada!');
+  };
+
+  const handleAddRoutine = (item: Omit<RoutineItem, 'id' | 'created_at' | 'user_id'>) => {
+    const newItem: RoutineItem = { ...item, id: crypto.randomUUID(), created_at: new Date().toISOString(), user_id: userProfile.id };
+    setRoutines(prev => [newItem, ...prev]);
+    showToast('Meta adicionada!');
+  };
+
+  const handleToggleRoutine = (id: string, completed: boolean) => {
+    setRoutines(prev => prev.map(r => r.id === id ? { ...r, completed } : r));
+    if (completed) {
+      const item = routines.find(r => r.id === id);
+      if (item) {
+        const xpGain = item.type === 'WORKOUT' ? 100 : 50;
+        setUserProfile(prev => ({ ...prev, xp: (prev.xp || 0) + xpGain }));
+      }
     }
   };
 
-  const handleSaveCategory = async (catData: Omit<Category, 'id'> & { id?: string }) => {
-    if (!user) return;
-    const id = catData.id || crypto.randomUUID();
-    const newCategory = { ...catData, id, user_id: user.id };
-
-    setCategories(prev => catData.id ? prev.map(c => c.id === id ? newCategory : c) : [...prev, newCategory]);
-    await supabase.from('categories').upsert(newCategory);
+  const handleDeleteRoutine = (id: string) => {
+    setRoutines(prev => prev.filter(r => r.id !== id));
+    showToast('Meta removida.');
   };
 
-  const handleSaveBudget = async (budgetData: Omit<Budget, 'id' | 'user_id'>) => {
-    if (!user) return;
-    const existingIndex = budgets.findIndex(b => b.category_id === budgetData.category_id && b.month === budgetData.month && b.year === budgetData.year);
-    const id = existingIndex >= 0 ? budgets[existingIndex].id : crypto.randomUUID();
-    const newBudget = { ...budgetData, id, user_id: user.id };
-
-    setBudgets(prev => existingIndex >= 0 ? prev.map((b, i) => i === existingIndex ? newBudget : b) : [...prev, newBudget]);
-    await supabase.from('budgets').upsert(newBudget);
-  };
-
-  if (loading) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-slate-950 text-slate-400 gap-4">
-        <Loader2 className="animate-spin text-indigo-500" size={48} />
-        <p className="font-medium animate-pulse">Conectando ao FinanceFlow...</p>
-      </div>
-    );
-  }
-
-  if (!user) {
-    return <Auth />;
-  }
-
-  const renderContent = () => {
-    switch (activeTab) {
-      case 'dashboard':
-        return <Dashboard transactions={transactions} categories={categories} setActiveTab={setActiveTab} userProfile={userProfile || { id: user.id, email: user.email }} />;
-      case 'income':
-        return <TransactionList type="INCOME" transactions={transactions} categories={categories} onAdd={() => { setFormType('INCOME'); setIsFormOpen(true); }} onEdit={(t) => { setEditingTransaction(t); setFormType('INCOME'); setIsFormOpen(true); }} onDelete={handleDeleteTransaction} />;
-      case 'expenses':
-        return <TransactionList type="EXPENSE" transactions={transactions} categories={categories} onAdd={() => { setFormType('EXPENSE'); setIsFormOpen(true); }} onEdit={(t) => { setEditingTransaction(t); setFormType('EXPENSE'); setIsFormOpen(true); }} onDelete={handleDeleteTransaction} />;
-      case 'planning':
-        return <Planning categories={categories} budgets={budgets} transactions={transactions} onSaveBudget={handleSaveBudget} />;
-      case 'categories':
-        return <CategorySettings categories={categories} onSave={handleSaveCategory} onDelete={(id) => supabase.from('categories').delete().eq('id', id).then(() => setCategories(p => p.filter(c => c.id !== id)))} />;
-      default:
-        return null;
-    }
+  const handleUpdateProfile = async (name: string, photo: string, goal: string, whatsapp: string) => {
+    setUserProfile(prev => ({ ...prev, full_name: name, avatar_url: photo, financial_goal: goal, whatsapp_number: whatsapp }));
+    showToast('Perfil salvo!');
   };
 
   return (
     <Layout 
       activeTab={activeTab} 
-      setActiveTab={setActiveTab}
-      onAddClick={() => setIsAddMenuOpen(true)}
-      userProfile={userProfile || { id: user.id, email: user.email }}
-      onUpdateProfile={handleUpdateProfile}
-      onLogout={handleLogout}
+      setActiveTab={setActiveTab} 
+      onAddClick={() => { setPrefilledDate(undefined); setIsFormOpen(true); }} 
+      userProfile={userProfile} 
+      onUpdateProfile={handleUpdateProfile} 
+      onLogout={() => { localStorage.clear(); window.location.reload(); }}
+      isSyncing={isSyncing}
+      githubToken={githubToken}
+      onSaveGithubToken={handleSaveGitHubToken}
+      onSyncGitHub={() => handleGitHubSync('PUSH')}
+      onRestoreGitHub={() => handleGitHubSync('PULL')}
     >
-      {renderContent()}
+      {activeTab === 'dashboard' && <Dashboard transactions={transactions} categories={categories} setActiveTab={setActiveTab} userProfile={userProfile} />}
+      {activeTab === 'routines' && <RoutineTracker routines={routines} userProfile={userProfile} onAdd={handleAddRoutine} onToggle={handleToggleRoutine} onDelete={handleDeleteRoutine} />}
+      {activeTab === 'income' && <TransactionList type="INCOME" transactions={transactions} categories={categories} onAdd={() => { setFormType('INCOME'); setIsFormOpen(true); }} onEdit={(t) => { setEditingTransaction(t); setFormType('INCOME'); setIsFormOpen(true); }} onDelete={handleDeleteTransaction} onToggleStatus={handleToggleTransactionStatus} />}
+      {activeTab === 'expenses' && <TransactionList type="EXPENSE" transactions={transactions} categories={categories} onAdd={() => { setFormType('EXPENSE'); setIsFormOpen(true); }} onEdit={(t) => { setEditingTransaction(t); setFormType('EXPENSE'); setIsFormOpen(true); }} onDelete={handleDeleteTransaction} onToggleStatus={handleToggleTransactionStatus} />}
+      {activeTab === 'planning' && <Planning categories={categories} budgets={budgets} transactions={transactions} onSaveBudget={handleSaveBudget} />}
+      {activeTab === 'categories' && <CategorySettings categories={categories} onSave={handleSaveCategory} onDelete={handleDeleteCategory} />}
 
-      {isAddMenuOpen && (
-         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200">
-            <div className="absolute inset-0" onClick={() => setIsAddMenuOpen(false)} />
-            <div className="relative w-full max-w-sm bg-white dark:bg-slate-900 rounded-t-[2rem] sm:rounded-[2rem] p-6 shadow-2xl animate-in slide-in-from-bottom duration-300">
-               <div className="flex justify-between items-center mb-8">
-                 <h3 className="text-xl font-bold text-slate-800 dark:text-white">Adicionar Novo</h3>
-                 <button onClick={() => setIsAddMenuOpen(false)} className="p-2 bg-slate-100 dark:bg-slate-800 rounded-full text-slate-500"><X size={20} /></button>
-               </div>
-               <div className="grid grid-cols-2 gap-4 mb-4">
-                  <button onClick={() => { setFormType('INCOME'); setEditingTransaction(undefined); setIsFormOpen(true); setIsAddMenuOpen(false); }} className="flex flex-col items-center gap-4 p-6 bg-emerald-50 dark:bg-emerald-900/20 border-2 border-emerald-100 dark:border-emerald-900/50 rounded-3xl">
-                    <div className="w-14 h-14 bg-emerald-100 dark:bg-emerald-900/50 text-emerald-600 rounded-2xl flex items-center justify-center"><ArrowUpCircle size={32} /></div>
-                    <span className="font-bold text-emerald-700 dark:text-emerald-400">Receita</span>
-                  </button>
-                  <button onClick={() => { setFormType('EXPENSE'); setEditingTransaction(undefined); setIsFormOpen(true); setIsAddMenuOpen(false); }} className="flex flex-col items-center gap-4 p-6 bg-rose-50 dark:bg-rose-900/20 border-2 border-rose-100 dark:border-rose-900/50 rounded-3xl">
-                    <div className="w-14 h-14 bg-rose-100 dark:bg-rose-900/50 text-rose-600 rounded-2xl flex items-center justify-center"><ArrowDownCircle size={32} /></div>
-                    <span className="font-bold text-rose-700 dark:text-rose-400">Despesa</span>
-                  </button>
-               </div>
+      <div className="fixed top-20 right-4 left-4 sm:left-auto sm:right-6 sm:w-80 z-[100] flex flex-col gap-3 pointer-events-none">
+        {toasts.map(t => (
+          <div key={t.id} className={`pointer-events-auto flex items-center gap-3 p-4 rounded-3xl shadow-2xl border backdrop-blur-xl animate-in slide-in-from-right-8 duration-300 ${t.type === 'success' ? 'bg-emerald-500/90 border-emerald-400 text-white' : t.type === 'error' ? 'bg-rose-500/90 border-rose-400 text-white' : t.type === 'delete' ? 'bg-slate-800/90 border-slate-700 text-white' : 'bg-indigo-500/90 border-indigo-400 text-white'}`}>
+            <div className="shrink-0">
+              {t.type === 'success' && <CheckCircle2 size={20} />}
+              {t.type === 'error' && <AlertCircle size={20} />}
+              {t.type === 'delete' && <Trash2 size={20} />}
+              {t.type === 'info' && <Info size={20} />}
             </div>
-         </div>
-      )}
+            <p className="text-sm font-bold tracking-tight">{t.message}</p>
+            <button onClick={() => setToasts(prev => prev.filter(x => x.id !== t.id))} className="ml-auto p-1.5 opacity-60 hover:opacity-100 transition-opacity"><X size={14} /></button>
+          </div>
+        ))}
+      </div>
 
-      {isFormOpen && (
-        <TransactionForm
-          type={formType}
-          categories={categories}
-          onSubmit={editingTransaction ? handleUpdateTransaction : handleAddTransaction}
-          onClose={() => setIsFormOpen(false)}
-          initialData={editingTransaction}
-        />
-      )}
+      {isFormOpen && <TransactionForm type={formType} categories={categories} onSubmit={editingTransaction ? handleUpdateTransaction : handleAddTransaction} onClose={() => { setIsFormOpen(false); setEditingTransaction(undefined); }} initialData={editingTransaction} prefilledDate={prefilledDate} />}
     </Layout>
   );
 };

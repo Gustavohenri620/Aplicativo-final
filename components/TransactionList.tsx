@@ -13,11 +13,13 @@ import {
   SlidersHorizontal,
   ArrowUpDown,
   X,
-  RotateCcw
+  RotateCcw,
+  CheckCircle2
 } from 'lucide-react';
-import { Transaction, Category, TransactionType } from '../types';
+import { Transaction, Category, TransactionType, TransactionStatus } from '../types';
 import { PAYMENT_METHODS } from '../constants';
 
+// Added onToggleStatus to TransactionListProps to match App.tsx usage
 interface TransactionListProps {
   type: TransactionType;
   transactions: Transaction[];
@@ -25,11 +27,12 @@ interface TransactionListProps {
   onAdd: () => void;
   onEdit: (transaction: Transaction) => void;
   onDelete: (id: string) => void;
+  onToggleStatus: (id: string, currentStatus: TransactionStatus) => void;
 }
 
 type SortOption = 'date-desc' | 'date-asc' | 'amount-desc' | 'amount-asc';
 
-const TransactionList: React.FC<TransactionListProps> = ({ type, transactions, categories, onAdd, onEdit, onDelete }) => {
+const TransactionList: React.FC<TransactionListProps> = ({ type, transactions, categories, onAdd, onEdit, onDelete, onToggleStatus }) => {
   const [searchTerm, setSearchTerm] = useState('');
   
   // Advanced Filters State
@@ -247,22 +250,24 @@ const TransactionList: React.FC<TransactionListProps> = ({ type, transactions, c
             <div className="space-y-2">
               {filteredTransactions.map((t) => {
                 const category = categories.find(c => c.id === t.category_id);
+                const isCompleted = t.status === 'COMPLETED';
                 return (
                   <div 
                     key={t.id} 
-                    className="group bg-white dark:bg-slate-900 sm:bg-slate-50 sm:dark:bg-slate-800/50 p-4 rounded-2xl border border-slate-100 sm:border-transparent dark:border-slate-800 hover:border-indigo-200 dark:hover:border-indigo-900/50 transition-all hover:shadow-md flex items-center justify-between gap-4"
+                    className={`group bg-white dark:bg-slate-900 sm:bg-slate-50 sm:dark:bg-slate-800/50 p-4 rounded-2xl border border-slate-100 sm:border-transparent dark:border-slate-800 hover:border-indigo-200 dark:hover:border-indigo-900/50 transition-all hover:shadow-md flex items-center justify-between gap-4 ${isCompleted ? 'opacity-70' : ''}`}
                   >
                     <div className="flex items-center gap-4 overflow-hidden">
-                      {/* Ícone da Categoria/Tipo */}
-                      <div 
-                        className={`w-12 h-12 shrink-0 rounded-2xl flex items-center justify-center text-xl font-bold text-white shadow-sm`}
-                        style={{ backgroundColor: category?.color || '#94a3b8' }}
+                      {/* Interactive Icon for Toggling Status */}
+                      <button 
+                        onClick={() => onToggleStatus(t.id, t.status || 'PENDING')}
+                        className={`w-12 h-12 shrink-0 rounded-2xl flex items-center justify-center text-xl font-bold text-white shadow-sm transition-all active:scale-90`}
+                        style={{ backgroundColor: isCompleted ? '#10b981' : (category?.color || '#94a3b8') }}
                       >
-                         {category?.name.charAt(0)}
-                      </div>
+                         {isCompleted ? <CheckCircle2 size={24} /> : category?.name.charAt(0)}
+                      </button>
                       
                       <div className="min-w-0">
-                        <h4 className="font-bold text-slate-800 dark:text-white truncate text-base mb-0.5">{t.description}</h4>
+                        <h4 className={`font-bold text-slate-800 dark:text-white truncate text-base mb-0.5 ${isCompleted ? 'line-through' : ''}`}>{t.description}</h4>
                         <div className="flex items-center gap-3 text-xs text-slate-500 dark:text-slate-400 font-medium">
                            <span className="flex items-center gap-1"><Tag size={12}/> {category?.name}</span>
                            <span className="w-1 h-1 bg-slate-300 rounded-full"></span>
