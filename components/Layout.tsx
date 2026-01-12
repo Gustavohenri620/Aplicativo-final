@@ -54,7 +54,7 @@ const Layout: React.FC<LayoutProps> = ({
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   
-  // Sincronizar estados temporários quando o modal abrir ou o perfil for atualizado externamente
+  // Sincronizar estados temporários quando o modal abrir
   useEffect(() => {
     if (isProfileModalOpen) {
       setTempName(userProfile.full_name || '');
@@ -85,24 +85,18 @@ const Layout: React.FC<LayoutProps> = ({
     if (isSyncing) return;
     
     try {
-      // Chamar função de atualização e aguardar confirmação antes de fechar
       await onUpdateProfile(tempName, tempPhoto, tempGoal, tempWhatsapp);
-      // Somente fechar se não houver erro lançado pelo App.tsx
       setIsProfileModalOpen(false);
     } catch (err) {
       console.error("Falha ao salvar perfil no Layout:", err);
-      // O modal permanece aberto para o usuário tentar novamente ou corrigir dados
     }
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      // Limite de 1MB para base64 em campos de texto simples no DB
-      if (file.size > 1024 * 1024) { 
-        alert("A foto é muito grande. Escolha uma imagem de até 1MB.");
-        return;
-      }
+      // Removido limite restritivo de tamanho por solicitação do usuário.
+      // Imagens muito grandes podem ser lentas para salvar como Base64, mas agora são permitidas.
       const reader = new FileReader();
       reader.onloadend = () => {
         setTempPhoto(reader.result as string);
@@ -181,7 +175,7 @@ const Layout: React.FC<LayoutProps> = ({
             {isSyncing ? (
               <div className="flex items-center gap-2">
                 <CloudUpload size={14} className="text-indigo-400 animate-pulse" />
-                <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">Salvando...</span>
+                <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">Sincronizando...</span>
               </div>
             ) : (
               <div className="flex items-center gap-2 group cursor-help">
@@ -190,7 +184,7 @@ const Layout: React.FC<LayoutProps> = ({
                   <CheckCircle2 size={6} className="absolute -bottom-0.5 -right-0.5 text-emerald-300" />
                 </div>
                 <div className="flex flex-col -space-y-0.5">
-                  <span className="text-[10px] font-black text-emerald-500 uppercase tracking-widest leading-none">Nuvem OK</span>
+                  <span className="text-[10px] font-black text-emerald-500 uppercase tracking-widest leading-none">Conectado</span>
                   {lastSyncTime && (
                     <span className="text-[8px] font-bold text-slate-500 lowercase leading-none">às {lastSyncTime}</span>
                   )}
