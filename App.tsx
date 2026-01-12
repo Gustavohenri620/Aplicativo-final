@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Layout from './components/Layout';
 import Dashboard from './components/Dashboard';
 import TransactionList from './components/TransactionList';
@@ -9,13 +9,20 @@ import CategorySettings from './components/CategorySettings';
 import Auth from './components/Auth';
 import { Transaction, Category, Budget, TransactionType, UserProfile } from './types';
 import { DEFAULT_CATEGORIES } from './constants';
-import { X, Loader2, ArrowUpCircle, ArrowDownCircle } from 'lucide-react';
+import { X, Loader2, ArrowUpCircle, ArrowDownCircle, CheckCircle2, Trash2, Info, AlertCircle } from 'lucide-react';
 import { supabase } from './supabase';
+
+interface Toast {
+  id: string;
+  message: string;
+  type: 'success' | 'error' | 'info' | 'delete';
+}
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<any>(null);
+  const [toasts, setToasts] = useState<Toast[]>([]);
   
   // States
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
@@ -27,6 +34,15 @@ const App: React.FC = () => {
   const [isAddMenuOpen, setIsAddMenuOpen] = useState(false);
   const [formType, setFormType] = useState<TransactionType>('EXPENSE');
   const [editingTransaction, setEditingTransaction] = useState<Transaction | undefined>();
+
+  // Toast helper
+  const showToast = useCallback((message: string, type: Toast['type'] = 'success') => {
+    const id = crypto.randomUUID();
+    setToasts(prev => [...prev, { id, message, type }]);
+    setTimeout(() => {
+      setToasts(prev => prev.filter(t => t.id !== id));
+    }, 3000);
+  }, []);
 
   useEffect(() => {
     document.documentElement.classList.add('dark');
@@ -101,6 +117,7 @@ const App: React.FC = () => {
 
     } catch (error) {
       console.error('Erro ao carregar dados:', error);
+      showToast('Erro ao carregar dados', 'error');
     } finally {
       setLoading(false);
     }
@@ -118,12 +135,18 @@ const App: React.FC = () => {
     };
 
     setUserProfile(updatedProfile);
-    await supabase.from('profiles').upsert(updatedProfile);
+    const { error } = await supabase.from('profiles').upsert(updatedProfile);
+    if (!error) {
+      showToast('Perfil atualizado com sucesso!');
+    } else {
+      showToast('Erro ao atualizar perfil', 'error');
+    }
   };
 
   const handleLogout = async () => {
     if (window.confirm('Deseja realmente sair da sua conta?')) {
       await supabase.auth.signOut();
+      showToast('Até logo!', 'info');
     }
   };
 
@@ -137,7 +160,12 @@ const App: React.FC = () => {
 
     setTransactions(prev => [newTransaction as Transaction, ...prev]);
     setIsFormOpen(false);
-    await supabase.from('transactions').insert(newTransaction);
+    const { error } = await supabase.from('transactions').insert(newTransaction);
+    if (!error) {
+      showToast('Transação adicionada!');
+    } else {
+      showToast('Erro ao adicionar transação', 'error');
+    }
   };
 
   const handleUpdateTransaction = async (data: Omit<Transaction, 'id' | 'user_id'>) => {
@@ -147,13 +175,23 @@ const App: React.FC = () => {
     setTransactions(prev => prev.map(t => t.id === editingTransaction.id ? updated as Transaction : t));
     setEditingTransaction(undefined);
     setIsFormOpen(false);
-    await supabase.from('transactions').update(updated).eq('id', editingTransaction.id);
+    const { error } = await supabase.from('transactions').update(updated).eq('id', editingTransaction.id);
+    if (!error) {
+      showToast('Transação atualizada!');
+    } else {
+      showToast('Erro ao atualizar transação', 'error');
+    }
   };
 
   const handleDeleteTransaction = async (id: string) => {
     if (window.confirm('Excluir transação?')) {
       setTransactions(prev => prev.filter(t => t.id !== id));
-      await supabase.from('transactions').delete().eq('id', id);
+      const { error } = await supabase.from('transactions').delete().eq('id', id);
+      if (!error) {
+        showToast('Transação removida.', 'delete');
+      } else {
+        showToast('Erro ao remover transação', 'error');
+      }
     }
   };
 
@@ -163,7 +201,24 @@ const App: React.FC = () => {
     const newCategory = { ...catData, id, user_id: user.id };
 
     setCategories(prev => catData.id ? prev.map(c => c.id === id ? newCategory : c) : [...prev, newCategory]);
-    await supabase.from('categories').upsert(newCategory);
+    const { error } = await supabase.from('categories').upsert(newCategory);
+    if (!error) {
+      showToast(catData.id ? 'Categoria atualizada!' : 'Categoria criada!');
+    } else {
+      showToast('Erro ao salvar categoria', 'error');
+    }
+  };
+
+  const handleDeleteCategory = async (id: string) => {
+    if (window.confirm('Excluir esta categoria? Todas as transações vinculadas poderão ser afetadas.')) {
+      setCategories(p => p.filter(c => c.id !== id));
+      const { error } = await supabase.from('categories').delete().eq('id', id);
+      if (!error) {
+        showToast('Categoria removida.', 'delete');
+      } else {
+        showToast('Erro ao excluir categoria', 'error');
+      }
+    }
   };
 
   const handleSaveBudget = async (budgetData: Omit<Budget, 'id' | 'user_id'>) => {
@@ -173,7 +228,12 @@ const App: React.FC = () => {
     const newBudget = { ...budgetData, id, user_id: user.id };
 
     setBudgets(prev => existingIndex >= 0 ? prev.map((b, i) => i === existingIndex ? newBudget : b) : [...prev, newBudget]);
-    await supabase.from('budgets').upsert(newBudget);
+    const { error } = await supabase.from('budgets').upsert(newBudget);
+    if (!error) {
+      showToast('Meta de gastos atualizada!');
+    } else {
+      showToast('Erro ao salvar meta', 'error');
+    }
   };
 
   if (loading) {
@@ -200,7 +260,7 @@ const App: React.FC = () => {
       case 'planning':
         return <Planning categories={categories} budgets={budgets} transactions={transactions} onSaveBudget={handleSaveBudget} />;
       case 'categories':
-        return <CategorySettings categories={categories} onSave={handleSaveCategory} onDelete={(id) => supabase.from('categories').delete().eq('id', id).then(() => setCategories(p => p.filter(c => c.id !== id)))} />;
+        return <CategorySettings categories={categories} onSave={handleSaveCategory} onDelete={handleDeleteCategory} />;
       default:
         return null;
     }
@@ -216,6 +276,35 @@ const App: React.FC = () => {
       onLogout={handleLogout}
     >
       {renderContent()}
+
+      {/* Toast Notifications */}
+      <div className="fixed top-20 right-4 left-4 sm:left-auto sm:right-6 sm:w-80 z-[100] flex flex-col gap-3 pointer-events-none">
+        {toasts.map(toast => (
+          <div 
+            key={toast.id}
+            className={`pointer-events-auto flex items-center gap-3 p-4 rounded-2xl shadow-2xl border backdrop-blur-md animate-in slide-in-from-right-8 duration-300 ${
+              toast.type === 'success' ? 'bg-emerald-500/90 border-emerald-400 text-white' :
+              toast.type === 'error' ? 'bg-rose-500/90 border-rose-400 text-white' :
+              toast.type === 'delete' ? 'bg-slate-800/90 border-slate-700 text-white' :
+              'bg-indigo-500/90 border-indigo-400 text-white'
+            }`}
+          >
+            <div className="shrink-0">
+              {toast.type === 'success' && <CheckCircle2 size={20} />}
+              {toast.type === 'error' && <AlertCircle size={20} />}
+              {toast.type === 'delete' && <Trash2 size={20} />}
+              {toast.type === 'info' && <Info size={20} />}
+            </div>
+            <p className="text-sm font-bold tracking-tight">{toast.message}</p>
+            <button 
+              onClick={() => setToasts(prev => prev.filter(t => t.id !== toast.id))}
+              className="ml-auto p-1 hover:bg-white/20 rounded-lg transition-colors"
+            >
+              <X size={14} />
+            </button>
+          </div>
+        ))}
+      </div>
 
       {isAddMenuOpen && (
          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200">
