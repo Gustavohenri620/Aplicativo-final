@@ -10,14 +10,12 @@ interface TransactionFormProps {
   onSubmit: (transaction: Omit<Transaction, 'id' | 'user_id'>) => void;
   onClose: () => void;
   initialData?: Transaction;
-  prefilledDate?: string;
 }
 
-const TransactionForm: React.FC<TransactionFormProps> = ({ type, categories, onSubmit, onClose, initialData, prefilledDate }) => {
+const TransactionForm: React.FC<TransactionFormProps> = ({ type, categories, onSubmit, onClose, initialData }) => {
   const [description, setDescription] = useState(initialData?.description || '');
   const [amount, setAmount] = useState(initialData?.amount?.toString() || '');
-  // Initialize date with initialData, then prefilledDate, then today
-  const [date, setDate] = useState(initialData?.date || prefilledDate || new Date().toISOString().split('T')[0]);
+  const [date, setDate] = useState(initialData?.date || new Date().toISOString().split('T')[0]);
   const [categoryId, setCategoryId] = useState(initialData?.category_id || (categories.length > 0 ? categories[0].id : ''));
   const [expenseType, setExpenseType] = useState<ExpenseType>(initialData?.expense_type || 'VARIABLE');
   const [incomeType, setIncomeType] = useState<IncomeType>(initialData?.income_type || 'SALARY');
@@ -38,8 +36,6 @@ const TransactionForm: React.FC<TransactionFormProps> = ({ type, categories, onS
       income_type: type === 'INCOME' ? incomeType : undefined,
       payment_method: paymentMethod,
       recurring,
-      // Preserve existing status or default to PENDING
-      status: initialData?.status || 'PENDING'
     });
     onClose();
   };
