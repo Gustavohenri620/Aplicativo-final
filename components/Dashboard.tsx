@@ -1,8 +1,7 @@
-
 import React, { useState } from 'react';
 import { 
   BarChart, Bar, XAxis, Tooltip, ResponsiveContainer, Cell,
-  PieChart, Pie
+  PieChart, Pie, ReferenceArea
 } from 'recharts';
 import { 
   Wallet, TrendingUp, TrendingDown, 
@@ -252,7 +251,7 @@ const Dashboard: React.FC<DashboardProps> = ({ transactions, categories, setActi
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* PRÓXIMOS LANÇAMENTOS (SUBSTITUI O COMPARATIVO SEMESTRAL) */}
+        {/* PRÓXIMOS LANÇAMENTOS */}
         <div className="lg:col-span-2 bg-white dark:bg-slate-900 p-6 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800">
           <div className="flex items-center justify-between mb-6">
              <div className="flex items-center gap-3">
@@ -353,21 +352,37 @@ const Dashboard: React.FC<DashboardProps> = ({ transactions, categories, setActi
                   itemStyle={{ fontSize: '11px', fontWeight: 'bold' }}
                   labelStyle={{ color: '#94a3b8', fontSize: '10px', marginBottom: '4px', fontWeight: 'bold' }}
                 />
-                <Bar dataKey="receitas" fill="#10b981" radius={[2, 2, 0, 0]} barSize={6}>
+                
+                {/* Visual Destaque Pronunciado do dia selecionado */}
+                {selectedDay && (
+                  <ReferenceArea 
+                    x1={selectedDayInfo?.name} 
+                    x2={selectedDayInfo?.name} 
+                    fill="#6366f1" 
+                    fillOpacity={0.08}
+                    stroke="none"
+                  />
+                )}
+
+                <Bar dataKey="receitas" fill="#10b981" radius={[2, 2, 0, 0]} barSize={8}>
                   {weeklyData.map((entry, index) => (
                     <Cell 
                       key={`cell-income-${index}`} 
                       fill={entry.fullDate === selectedDay ? '#34d399' : '#10b981'} 
-                      className="cursor-pointer hover:opacity-80 transition-opacity"
+                      stroke={entry.fullDate === selectedDay ? '#059669' : 'none'}
+                      strokeWidth={entry.fullDate === selectedDay ? 1 : 0}
+                      className="cursor-pointer hover:opacity-80 transition-all"
                     />
                   ))}
                 </Bar>
-                <Bar dataKey="despesas" fill="#f43f5e" radius={[2, 2, 0, 0]} barSize={6}>
+                <Bar dataKey="despesas" fill="#f43f5e" radius={[2, 2, 0, 0]} barSize={8}>
                   {weeklyData.map((entry, index) => (
                     <Cell 
                       key={`cell-expense-${index}`} 
                       fill={entry.fullDate === selectedDay ? '#fb7185' : '#f43f5e'} 
-                      className="cursor-pointer hover:opacity-80 transition-opacity"
+                      stroke={entry.fullDate === selectedDay ? '#e11d48' : 'none'}
+                      strokeWidth={entry.fullDate === selectedDay ? 1 : 0}
+                      className="cursor-pointer hover:opacity-80 transition-all"
                     />
                   ))}
                 </Bar>
@@ -391,7 +406,7 @@ const Dashboard: React.FC<DashboardProps> = ({ transactions, categories, setActi
       {/* DETALHAMENTO DIÁRIO (INTERAÇÃO GRÁFICO) */}
       {selectedDay && (
         <div className="animate-in slide-in-from-top-4 fade-in duration-300">
-           <div className="bg-indigo-600 text-white rounded-3xl p-6 shadow-xl shadow-indigo-900/20 relative overflow-hidden">
+           <div className="bg-indigo-600 text-white rounded-3xl p-6 shadow-xl shadow-indigo-900/20 relative border-b-4 border-indigo-700 overflow-hidden">
               <div className="absolute top-0 right-0 p-8 opacity-10 pointer-events-none">
                 <Activity size={120} />
               </div>
@@ -417,7 +432,7 @@ const Dashboard: React.FC<DashboardProps> = ({ transactions, categories, setActi
                     const category = categories.find(c => c.id === t.category_id);
                     const Icon = ICON_MAP[category?.icon || 'MoreHorizontal'] || MoreHorizontal;
                     return (
-                      <div key={t.id} className="flex items-center justify-between bg-white/10 backdrop-blur-md p-4 rounded-2xl border border-white/10">
+                      <div key={t.id} className="flex items-center justify-between bg-white/10 backdrop-blur-md p-4 rounded-2xl border border-white/10 shadow-sm">
                         <div className="flex items-center gap-4">
                           <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
                             <Icon size={18} />
